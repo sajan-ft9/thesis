@@ -1,0 +1,10 @@
+**Final Test Performance**
+
+| Metric | Value | 95% CI |
+| --- | --- | --- |
+| ROC-AUC | 0.9678 | [0.9504, 0.9816] |
+| Accuracy | 0.9183 | [0.8958, 0.9391] |
+| Sensitivity (Recall) | 0.9667 | — |
+| Specificity | 0.8376 | — |
+| Precision | 0.9084 | — |
+| F1-score | 0.9366 | — |

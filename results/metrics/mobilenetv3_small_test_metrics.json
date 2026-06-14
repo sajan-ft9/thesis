@@ -1,0 +1,58 @@
+{
+  "experiment_name": "mobilenetv3_small",
+  "checkpoint": "models/mobilenetv3_small_best.pth",
+  "n_test": 624,
+  "metrics": {
+    "accuracy": 0.875,
+    "precision": 0.8347639484978541,
+    "recall": 0.9974358974358974,
+    "sensitivity": 0.9974358974358974,
+    "specificity": 0.6709401709401709,
+    "f1": 0.9088785046728972,
+    "auc": 0.974293228139382,
+    "tp": 389,
+    "tn": 157,
+    "fp": 77,
+    "fn": 1,
+    "threshold": 0.5,
+    "n": 624
+  },
+  "confidence_intervals": {
+    "accuracy": {
+      "point": 0.875,
+      "low": 0.8493589743589743,
+      "high": 0.9006410256410257
+    },
+    "auc": {
+      "point": 0.974293228139382,
+      "low": 0.9631839160341391,
+      "high": 0.9843414170304142
+    },
+    "n_boot": 1000,
+    "alpha": 0.05
+  },
+  "youden_threshold": {
+    "threshold": 0.9347241520881653,
+    "sensitivity": 0.9512820512820512,
+    "specificity": 0.8888888888888888,
+    "youden_j": 0.8401709401709401
+  },
+  "n_errors": 78,
+  "n_false_positive": 77,
+  "n_false_negative": 1,
+  "figures": {
+    "confusion_matrix": {
+      "png": "results/confusion_matrices/mobilenetv3_small_confusion_matrix.png",
+      "pdf": "results/confusion_matrices/mobilenetv3_small_confusion_matrix.pdf"
+    },
+    "roc_curve": {
+      "png": "results/roc_curves/mobilenetv3_small_roc_curve.png",
+      "pdf": "results/roc_curves/mobilenetv3_small_roc_curve.pdf"
+    },
+    "pr_curve": {
+      "png": "results/figures/mobilenetv3_small_pr_curve.png",
+      "pdf": "results/figures/mobilenetv3_small_pr_curve.pdf"
+    }
+  },
+  "error_cases_csv": "results/metrics/mobilenetv3_small_error_cases.csv"
+}

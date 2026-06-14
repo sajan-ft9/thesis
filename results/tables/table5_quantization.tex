@@ -1,0 +1,13 @@
+\begin{table}
+\caption{Quantization Results (backend: qnnpack)}
+\label{tab:quant}
+\begin{tabular}{lrrrrrrr}
+\toprule
+Variant & Size (MB) & Size ↓ (\%) & Accuracy & Acc drop (\%) & AUC & AUC drop (\%) & Latency (ms) \\
+\midrule
+FP32 & 17.661000 & 0.000000 & 0.918300 & 0.000000 & 0.967800 & 0.000000 & 122.428000 \\
+INT8 dynamic & 16.679000 & 5.600000 & 0.919900 & -0.160000 & 0.968200 & -0.040000 & 120.863000 \\
+INT8 static (PTQ) & 5.129000 & 71.000000 & 0.810900 & 10.740000 & 0.944400 & 2.340000 & 15.042000 \\
+\bottomrule
+\end{tabular}
+\end{table}

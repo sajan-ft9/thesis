@@ -1,0 +1,47 @@
+{
+  "experiment_name": "efficientnet_b0",
+  "backend": "qnnpack",
+  "static_ptq_supported": true,
+  "onnx_export_ok": true,
+  "variants": [
+    {
+      "variant": "FP32",
+      "size_mb": 17.661,
+      "accuracy": 0.9183,
+      "auc": 0.9678,
+      "sensitivity": 0.9667,
+      "specificity": 0.8376,
+      "latency_ms_mean": 122.428,
+      "latency_ms_std": 5.458,
+      "acc_drop_pct": 0.0,
+      "auc_drop_pct": 0.0,
+      "size_reduction_pct": 0.0
+    },
+    {
+      "variant": "INT8 dynamic",
+      "size_mb": 16.679,
+      "accuracy": 0.9199,
+      "auc": 0.9682,
+      "sensitivity": 0.9667,
+      "specificity": 0.8419,
+      "latency_ms_mean": 120.863,
+      "latency_ms_std": 0.594,
+      "acc_drop_pct": -0.16,
+      "auc_drop_pct": -0.04,
+      "size_reduction_pct": 5.6
+    },
+    {
+      "variant": "INT8 static (PTQ)",
+      "size_mb": 5.129,
+      "accuracy": 0.8109,
+      "auc": 0.9444,
+      "sensitivity": 0.9974,
+      "specificity": 0.5,
+      "latency_ms_mean": 15.042,
+      "latency_ms_std": 0.151,
+      "acc_drop_pct": 10.74,
+      "auc_drop_pct": 2.34,
+      "size_reduction_pct": 71.0
+    }
+  ]
+}

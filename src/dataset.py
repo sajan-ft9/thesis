@@ -139,6 +139,25 @@ def _file_md5(path: str, chunk_size: int = 1 << 20) -> str:
     return h.hexdigest()
 
 
+def deduplicate_samples(samples: Iterable[Sample]) -> tuple[list[Sample], list[str]]:
+    """Remove byte-identical duplicate images, keeping the first by sorted path.
+
+    Returns ``(kept_samples, removed_paths)``. Used to prevent the same image
+    leaking across the train/validation split (a known quirk of the Kermany set).
+    """
+    seen: set[str] = set()
+    kept: list[Sample] = []
+    removed: list[str] = []
+    for path, label in sorted(samples):
+        digest = _file_md5(path)
+        if digest in seen:
+            removed.append(path)
+        else:
+            seen.add(digest)
+            kept.append((path, label))
+    return kept, removed
+
+
 def find_duplicates(samples: Iterable[Sample]) -> dict[str, list[str]]:
     """Detect byte-identical duplicate images via MD5 hashing.
 
@@ -246,6 +265,10 @@ def build_dataloaders(cfg: Config, seed: int | None = None, drop_last: bool = Tr
 
     all_train = scan_split(root / cfg.data.train_dirname)
     test_samples = scan_split(root / cfg.data.test_dirname)
+    if cfg.data.deduplicate:
+        all_train, removed = deduplicate_samples(all_train)
+        if removed:
+            logger.info("Deduplicated train pool: removed %d byte-identical duplicate image(s)", len(removed))
     train_samples, val_samples = stratified_split(all_train, cfg.data.val_split, seed)
 
     logger.info(
@@ -291,25 +314,34 @@ def validate_dataset(cfg: Config, check_duplicates: bool = True, check_leakage: 
     """
     seed = cfg.seed
     root = Path(cfg.data.root)
-    all_train = scan_split(root / cfg.data.train_dirname)
+    all_train_raw = scan_split(root / cfg.data.train_dirname)
     test_samples = scan_split(root / cfg.data.test_dirname)
+
+    # Report the RAW (naive-split) state first, to expose the dataset's duplicate quirk.
+    raw_train, raw_val = stratified_split(all_train_raw, cfg.data.val_split, seed)
+    raw_splits = {"train": raw_train, "val": raw_val, "test": test_samples}
+
+    # Then apply deduplication (as training does) and re-check.
+    all_train, removed = (deduplicate_samples(all_train_raw) if cfg.data.deduplicate else (all_train_raw, []))
     train_samples, val_samples = stratified_split(all_train, cfg.data.val_split, seed)
     splits = {"train": train_samples, "val": val_samples, "test": test_samples}
 
     report: dict[str, object] = {
         "root": str(root),
         "seed": seed,
+        "deduplicate": cfg.data.deduplicate,
+        "n_train_duplicates_removed": len(removed),
         "class_distribution": {name: class_distribution(s) for name, s in splits.items()},
         "split_sizes": {name: len(s) for name, s in splits.items()},
+        "raw_split_sizes": {name: len(s) for name, s in raw_splits.items()},
     }
     if check_duplicates:
-        report["duplicates"] = {
-            name: {h: paths for h, paths in find_duplicates(s).items()} for name, s in splits.items()
-        }
-        report["n_duplicate_groups"] = {
-            name: len(report["duplicates"][name]) for name in splits  # type: ignore[index]
-        }
+        # Duplicates intrinsic to the raw splits (the dataset quirk we disclose).
+        report["duplicates"] = {name: find_duplicates(s) for name, s in raw_splits.items()}
+        report["n_duplicate_groups"] = {name: len(report["duplicates"][name]) for name in raw_splits}  # type: ignore[index]
     if check_leakage:
+        # Leakage before dedup (problem detected) vs after dedup (what training uses).
+        report["raw_leakage"] = verify_no_leakage(raw_splits, by_content=True)
         report["leakage"] = verify_no_leakage(splits, by_content=True)
     return report
 

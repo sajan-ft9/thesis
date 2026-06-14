@@ -1,0 +1,14 @@
+[
+  {
+    "variant": "efficientnet_b0_fp32",
+    "device": "cpu",
+    "size_mb": 17.661,
+    "latency_ms_mean": 119.698,
+    "latency_ms_std": 0.613,
+    "latency_ms_median": 119.679,
+    "latency_ms_p95": 120.615,
+    "throughput_img_per_s": 18.97,
+    "peak_rss_delta_mb": 314.77,
+    "latency_runs": 50
+  }
+]

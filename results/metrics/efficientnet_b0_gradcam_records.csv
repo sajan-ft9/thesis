@@ -1,0 +1,13 @@
+category,test_index,true_label,pred_label,probability,filename
+correct,0,Normal,Normal,0.0233,efficientnet_b0_correct_0000_trueNormal_predNormal_p0.02.png
+correct,1,Normal,Normal,0.0062,efficientnet_b0_correct_0001_trueNormal_predNormal_p0.01.png
+correct,2,Normal,Normal,0.0257,efficientnet_b0_correct_0002_trueNormal_predNormal_p0.03.png
+correct,3,Normal,Normal,0.0041,efficientnet_b0_correct_0003_trueNormal_predNormal_p0.00.png
+false_positive,16,Normal,Pneumonia,0.9791,efficientnet_b0_false_positive_0016_trueNormal_predPneumonia_p0.98.png
+false_positive,40,Normal,Pneumonia,0.915,efficientnet_b0_false_positive_0040_trueNormal_predPneumonia_p0.91.png
+false_positive,45,Normal,Pneumonia,0.9812,efficientnet_b0_false_positive_0045_trueNormal_predPneumonia_p0.98.png
+false_positive,52,Normal,Pneumonia,0.9683,efficientnet_b0_false_positive_0052_trueNormal_predPneumonia_p0.97.png
+false_negative,282,Pneumonia,Normal,0.2879,efficientnet_b0_false_negative_0282_truePneumonia_predNormal_p0.29.png
+false_negative,388,Pneumonia,Normal,0.4132,efficientnet_b0_false_negative_0388_truePneumonia_predNormal_p0.41.png
+false_negative,390,Pneumonia,Normal,0.3033,efficientnet_b0_false_negative_0390_truePneumonia_predNormal_p0.30.png
+false_negative,391,Pneumonia,Normal,0.0439,efficientnet_b0_false_negative_0391_truePneumonia_predNormal_p0.04.png

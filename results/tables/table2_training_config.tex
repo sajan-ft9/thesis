@@ -1,0 +1,25 @@
+\begin{table}
+\caption{Training Configuration}
+\label{tab:trainconfig}
+\begin{tabular}{ll}
+\toprule
+Hyperparameter & Value \\
+\midrule
+Backbone & efficientnet\_b0 \\
+Pretrained & ImageNet \\
+Image size & 224x224 \\
+Batch size & 32 \\
+Optimizer & AdamW \\
+Learning rate & 0.000300 \\
+Weight decay & 0.000100 \\
+LR schedule & 3-epoch warmup + cosine \\
+Epochs & 20 \\
+Unfreeze epoch & 8 \\
+Label smoothing & 0.050000 \\
+Early stopping patience & 7 \\
+Gradient clipping & 1.000000 \\
+Mixed precision & True \\
+Seed & 42 \\
+\bottomrule
+\end{tabular}
+\end{table}

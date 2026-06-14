@@ -1,0 +1,58 @@
+{
+  "experiment_name": "efficientnet_b0",
+  "checkpoint": "models/efficientnet_b0_best.pth",
+  "n_test": 624,
+  "metrics": {
+    "accuracy": 0.9182692307692307,
+    "precision": 0.908433734939759,
+    "recall": 0.9666666666666667,
+    "sensitivity": 0.9666666666666667,
+    "specificity": 0.8376068376068376,
+    "f1": 0.9366459627329192,
+    "auc": 0.9677514792899408,
+    "tp": 377,
+    "tn": 196,
+    "fp": 38,
+    "fn": 13,
+    "threshold": 0.5,
+    "n": 624
+  },
+  "confidence_intervals": {
+    "accuracy": {
+      "point": 0.9182692307692307,
+      "low": 0.8958333333333334,
+      "high": 0.9391025641025641
+    },
+    "auc": {
+      "point": 0.9677514792899408,
+      "low": 0.9504203537438336,
+      "high": 0.9815938536919384
+    },
+    "n_boot": 1000,
+    "alpha": 0.05
+  },
+  "youden_threshold": {
+    "threshold": 0.9184851050376892,
+    "sensitivity": 0.941025641025641,
+    "specificity": 0.9188034188034188,
+    "youden_j": 0.8598290598290598
+  },
+  "n_errors": 51,
+  "n_false_positive": 38,
+  "n_false_negative": 13,
+  "figures": {
+    "confusion_matrix": {
+      "png": "results/confusion_matrices/efficientnet_b0_confusion_matrix.png",
+      "pdf": "results/confusion_matrices/efficientnet_b0_confusion_matrix.pdf"
+    },
+    "roc_curve": {
+      "png": "results/roc_curves/efficientnet_b0_roc_curve.png",
+      "pdf": "results/roc_curves/efficientnet_b0_roc_curve.pdf"
+    },
+    "pr_curve": {
+      "png": "results/figures/efficientnet_b0_pr_curve.png",
+      "pdf": "results/figures/efficientnet_b0_pr_curve.pdf"
+    }
+  },
+  "error_cases_csv": "results/metrics/efficientnet_b0_error_cases.csv"
+}

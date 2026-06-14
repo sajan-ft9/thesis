@@ -1,0 +1,5 @@
+**Computational Efficiency**
+
+| Variant | Size (MB) | Latency mean (ms) | Latency p95 (ms) | Throughput (img/s) | Peak RSS Δ (MB) |
+| --- | --- | --- | --- | --- | --- |
+| efficientnet_b0_fp32 | 17.661 | 119.698 | 120.615 | 18.97 | 314.77 |

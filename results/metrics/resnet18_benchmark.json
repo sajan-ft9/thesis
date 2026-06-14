@@ -1,0 +1,14 @@
+[
+  {
+    "variant": "resnet18_fp32",
+    "device": "cpu",
+    "size_mb": 45.321,
+    "latency_ms_mean": 15.225,
+    "latency_ms_std": 0.392,
+    "latency_ms_median": 15.241,
+    "latency_ms_p95": 15.798,
+    "throughput_img_per_s": 50.43,
+    "peak_rss_delta_mb": null,
+    "latency_runs": 50
+  }
+]

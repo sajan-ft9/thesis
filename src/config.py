@@ -56,6 +56,7 @@ class DataConfig:
     batch_size: int = 32
     num_workers: int = 2
     pin_memory: bool = True
+    deduplicate: bool = True   # drop byte-identical duplicate images from the train pool before splitting
 
 
 @dataclass

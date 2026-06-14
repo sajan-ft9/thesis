@@ -212,7 +212,11 @@ def main() -> None:
 
     device = get_device(args.device)
     model, cfg = load_checkpoint(args.checkpoint, device)
-    result = benchmark_model(model, cfg, device, label=f"{cfg.model.name}_fp32")
+    # Provide the test loader so peak process RSS is sampled during a real inference pass.
+    from .dataset import build_dataloaders
+
+    loader = build_dataloaders(cfg, seed=cfg.seed, drop_last=False).test_loader
+    result = benchmark_model(model, cfg, device, label=f"{cfg.model.name}_fp32", loader=loader)
     out = Path(cfg.paths.results_dir) / "metrics" / f"{cfg.experiment_name}_benchmark.json"
     save_json([result], out)
     logger.info("Saved benchmark to %s", out)

@@ -62,24 +62,41 @@ def static_quantize(
 ) -> nn.Module:
     """FX graph-mode static post-training quantization with calibration (CPU).
 
+    Uses **per-channel symmetric INT8 weights + histogram activation observers**,
+    which is essential for convolution-heavy / SiLU networks like EfficientNet-B0:
+    the backend *default* (per-tensor) qconfig catastrophically degrades them
+    (AUC collapses below 0.6). Calibrate on a CLEAN (non-augmented) loader — never
+    the training loader with augmentation, and never the test set.
+
     Raises on tracing/backend failure; the caller is expected to catch and report
     the failure honestly rather than substitute fabricated numbers.
     """
-    from torch.ao.quantization import get_default_qconfig_mapping
+    from torch.ao.quantization import QConfig, QConfigMapping, get_default_qconfig_mapping
+    from torch.ao.quantization.observer import HistogramObserver, PerChannelMinMaxObserver
     from torch.ao.quantization.quantize_fx import convert_fx, prepare_fx
 
     torch.backends.quantized.engine = backend
-    model_cpu = copy.deepcopy(model).cpu().eval()
-    qconfig_mapping = get_default_qconfig_mapping(backend)
     example_inputs = (torch.randn(1, 3, img_size, img_size),)
 
-    prepared = prepare_fx(model_cpu, qconfig_mapping, example_inputs)
-    with torch.no_grad():
-        for i, (imgs, _) in enumerate(calib_loader):
-            prepared(imgs)
-            if i + 1 >= calibration_batches:
-                break
-    return convert_fx(prepared)
+    def _build(mapping: QConfigMapping) -> nn.Module:
+        model_cpu = copy.deepcopy(model).cpu().eval()
+        prepared = prepare_fx(model_cpu, mapping, example_inputs)
+        with torch.no_grad():
+            for i, (imgs, _) in enumerate(calib_loader):
+                prepared(imgs)
+                if i + 1 >= calibration_batches:
+                    break
+        return convert_fx(prepared)
+
+    per_channel = QConfig(
+        activation=HistogramObserver.with_args(reduce_range=False),
+        weight=PerChannelMinMaxObserver.with_args(dtype=torch.qint8, qscheme=torch.per_channel_symmetric),
+    )
+    try:
+        return _build(QConfigMapping().set_global(per_channel))
+    except Exception as exc:  # noqa: BLE001 - platform may not support per-channel; report and fall back
+        logger.warning("Per-channel static PTQ failed (%s); falling back to backend default qconfig.", exc)
+        return _build(get_default_qconfig_mapping(backend))
 
 
 def export_onnx(model: nn.Module, path: str | Path, img_size: int = 224, opset: int = 13) -> bool:
@@ -161,7 +178,8 @@ def run_quantization_study(checkpoint_path: str | Path, cfg: Config | None = Non
     # Static PTQ.
     static_supported = True
     try:
-        stat = static_quantize(model_fp32, data.train_loader, backend, img, cfg.quantize.calibration_batches)
+        # Calibrate on the clean (non-augmented) validation loader; never the test set.
+        stat = static_quantize(model_fp32, data.val_loader, backend, img, cfg.quantize.calibration_batches)
         record(stat, "INT8 static (PTQ)")
         try:
             torch.jit.save(torch.jit.script(stat), str(models_dir / f"{cfg.experiment_name}_int8_static.pt"))

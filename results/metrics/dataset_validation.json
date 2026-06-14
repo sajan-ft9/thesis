@@ -1,0 +1,182 @@
+{
+  "root": "data/raw/chest_xray",
+  "seed": 42,
+  "deduplicate": true,
+  "n_train_duplicates_removed": 26,
+  "class_distribution": {
+    "train": {
+      "Normal": 1072,
+      "Pneumonia": 3080
+    },
+    "val": {
+      "Normal": 268,
+      "Pneumonia": 770
+    },
+    "test": {
+      "Normal": 234,
+      "Pneumonia": 390
+    }
+  },
+  "split_sizes": {
+    "train": 4152,
+    "val": 1038,
+    "test": 624
+  },
+  "raw_split_sizes": {
+    "train": 4172,
+    "val": 1044,
+    "test": 624
+  },
+  "duplicates": {
+    "train": {
+      "297ec93cf54bc435d094bc842047d2ed": [
+        "data/raw/chest_xray/train/NORMAL/train_normal_00753.jpeg",
+        "data/raw/chest_xray/train/NORMAL/train_normal_00754.jpeg"
+      ],
+      "ff1be922f30f674c8ebbc9e81759fcc0": [
+        "data/raw/chest_xray/train/PNEUMONIA/train_pneumonia_01822.jpeg",
+        "data/raw/chest_xray/train/PNEUMONIA/train_pneumonia_01823.jpeg"
+      ],
+      "1f05bd8c5451d5127f667792a92e55c7": [
+        "data/raw/chest_xray/train/PNEUMONIA/train_pneumonia_01846.jpeg",
+        "data/raw/chest_xray/train/PNEUMONIA/train_pneumonia_01847.jpeg"
+      ],
+      "87003921db5695df39fe94bfc6cd8f3c": [
+        "data/raw/chest_xray/train/PNEUMONIA/train_pneumonia_01961.jpeg",
+        "data/raw/chest_xray/train/PNEUMONIA/train_pneumonia_01962.jpeg"
+      ],
+      "02c810ee3e0962f9fd832c350436a22e": [
+        "data/raw/chest_xray/train/PNEUMONIA/train_pneumonia_02249.jpeg",
+        "data/raw/chest_xray/train/PNEUMONIA/train_pneumonia_02250.jpeg"
+      ],
+      "259b5d3ed515688aee99ce9e03cc3224": [
+        "data/raw/chest_xray/train/PNEUMONIA/train_pneumonia_02367.jpeg",
+        "data/raw/chest_xray/train/PNEUMONIA/train_pneumonia_02368.jpeg"
+      ],
+      "79fd77d6a9232c78f2627303753f68a1": [
+        "data/raw/chest_xray/train/PNEUMONIA/train_pneumonia_02369.jpeg",
+        "data/raw/chest_xray/train/PNEUMONIA/train_pneumonia_02370.jpeg"
+      ],
+      "2ec482674d8d765700a82c7d6659d3a9": [
+        "data/raw/chest_xray/train/PNEUMONIA/train_pneumonia_02420.jpeg",
+        "data/raw/chest_xray/train/PNEUMONIA/train_pneumonia_02421.jpeg"
+      ],
+      "cce7e2c8b98ac4df147e584750ec567c": [
+        "data/raw/chest_xray/train/PNEUMONIA/train_pneumonia_02691.jpeg",
+        "data/raw/chest_xray/train/PNEUMONIA/train_pneumonia_02692.jpeg"
+      ],
+      "605aa687386037df59141ec2c4b44cf4": [
+        "data/raw/chest_xray/train/PNEUMONIA/train_pneumonia_03041.jpeg",
+        "data/raw/chest_xray/train/PNEUMONIA/train_pneumonia_03043.jpeg"
+      ],
+      "4ef0aca981ad6e586f62b19d1fa51081": [
+        "data/raw/chest_xray/train/PNEUMONIA/train_pneumonia_03076.jpeg",
+        "data/raw/chest_xray/train/PNEUMONIA/train_pneumonia_03077.jpeg"
+      ],
+      "c9c8b27ff8ba14e6f18ffefdffadcf46": [
+        "data/raw/chest_xray/train/PNEUMONIA/train_pneumonia_03085.jpeg",
+        "data/raw/chest_xray/train/PNEUMONIA/train_pneumonia_03086.jpeg"
+      ],
+      "d91926a1595d586c0830762e6560f7dc": [
+        "data/raw/chest_xray/train/PNEUMONIA/train_pneumonia_03286.jpeg",
+        "data/raw/chest_xray/train/PNEUMONIA/train_pneumonia_03287.jpeg"
+      ],
+      "e7bb7e2a6324f520a0bc42368e321c8c": [
+        "data/raw/chest_xray/train/PNEUMONIA/train_pneumonia_03494.jpeg",
+        "data/raw/chest_xray/train/PNEUMONIA/train_pneumonia_03495.jpeg"
+      ],
+      "6127329d52b6236a8ae17f93b816016c": [
+        "data/raw/chest_xray/train/PNEUMONIA/train_pneumonia_03665.jpeg",
+        "data/raw/chest_xray/train/PNEUMONIA/train_pneumonia_03666.jpeg"
+      ],
+      "82b102b130baaa0544f6438eca3a6e2b": [
+        "data/raw/chest_xray/train/PNEUMONIA/train_pneumonia_04922.jpeg",
+        "data/raw/chest_xray/train/PNEUMONIA/train_pneumonia_04923.jpeg"
+      ]
+    },
+    "val": {
+      "a7a86e8a1550dbd56d6909a70f647248": [
+        "data/raw/chest_xray/train/PNEUMONIA/train_pneumonia_02118.jpeg",
+        "data/raw/chest_xray/train/PNEUMONIA/train_pneumonia_02119.jpeg"
+      ]
+    },
+    "test": {
+      "b3388a5949e336c99d143fd5fc67dbec": [
+        "data/raw/chest_xray/test/NORMAL/test_normal_00094.jpeg",
+        "data/raw/chest_xray/test/NORMAL/test_normal_00095.jpeg"
+      ],
+      "063f997a10c28930fc41675c8b4eb775": [
+        "data/raw/chest_xray/test/NORMAL/test_normal_00117.jpeg",
+        "data/raw/chest_xray/test/NORMAL/test_normal_00118.jpeg"
+      ],
+      "791fdaf0799ac29868905d71413a50a8": [
+        "data/raw/chest_xray/test/NORMAL/test_normal_00138.jpeg",
+        "data/raw/chest_xray/test/NORMAL/test_normal_00139.jpeg"
+      ],
+      "643a2d349ffb231ff862bb6690257f1a": [
+        "data/raw/chest_xray/test/PNEUMONIA/test_pneumonia_00319.jpeg",
+        "data/raw/chest_xray/test/PNEUMONIA/test_pneumonia_00320.jpeg"
+      ],
+      "ef51d7449a62c408a31b30835467175e": [
+        "data/raw/chest_xray/test/PNEUMONIA/test_pneumonia_00337.jpeg",
+        "data/raw/chest_xray/test/PNEUMONIA/test_pneumonia_00338.jpeg"
+      ],
+      "16c102766eb108ddfb15c668bb1803c8": [
+        "data/raw/chest_xray/test/PNEUMONIA/test_pneumonia_00451.jpeg",
+        "data/raw/chest_xray/test/PNEUMONIA/test_pneumonia_00452.jpeg"
+      ]
+    }
+  },
+  "n_duplicate_groups": {
+    "train": 16,
+    "val": 1,
+    "test": 6
+  },
+  "raw_leakage": {
+    "path_leaks": {},
+    "content_leaks": {
+      "56c9b70ae27bc9912e233b05f5ef7195": [
+        "train",
+        "val"
+      ],
+      "93e410fbfa7e3ecea516d21767bc0112": [
+        "train",
+        "val"
+      ],
+      "5052b9e7837995d7d6286778f8a28a01": [
+        "train",
+        "val"
+      ],
+      "a7a86e8a1550dbd56d6909a70f647248": [
+        "train",
+        "val"
+      ],
+      "0b9b7fa30cd53b7670fc6042aca85c3e": [
+        "train",
+        "val"
+      ],
+      "a7e22b11276553950f547a252f388085": [
+        "train",
+        "val"
+      ],
+      "cf390e5e305bc1a22f68c233c1bcde8f": [
+        "train",
+        "val"
+      ],
+      "605aa687386037df59141ec2c4b44cf4": [
+        "train",
+        "val"
+      ],
+      "e5f19bb6812590310364d3f15cfe4fc5": [
+        "train",
+        "val"
+      ]
+    },
+    "clean": false
+  },
+  "leakage": {
+    "path_leaks": {},
+    "content_leaks": {},
+    "clean": true
+  }
+}

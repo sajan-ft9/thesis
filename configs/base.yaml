@@ -19,6 +19,7 @@ data:
   train_dirname: train
   test_dirname: test
   val_split: 0.20       # fraction of train used for validation (stratified)
+  deduplicate: true     # drop byte-identical duplicate images from the train pool before the split
   img_size: 224
   batch_size: 32
   num_workers: 2

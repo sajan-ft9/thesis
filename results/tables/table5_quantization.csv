@@ -1,0 +1,4 @@
+Variant,Size (MB),Size ↓ (%),Accuracy,Acc drop (%),AUC,AUC drop (%),Latency (ms)
+FP32,17.661,0.0,0.9183,0.0,0.9678,0.0,122.428
+INT8 dynamic,16.679,5.6,0.9199,-0.16,0.9682,-0.04,120.863
+INT8 static (PTQ),5.129,71.0,0.8109,10.74,0.9444,2.34,15.042
