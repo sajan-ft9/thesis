@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pneumonia-edge-xai"
+version = "1.0.0"
+description = "Memory-efficient, explainable, quantized pneumonia detection from chest X-rays for resource-constrained healthcare."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [{ name = "Rohan Maleku" }]
+keywords = [
+    "pneumonia detection", "chest x-ray", "deep learning", "efficientnet",
+    "grad-cam", "quantization", "edge ai", "explainable ai", "medical imaging",
+]
+
+[tool.setuptools]
+packages = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = [
+    "E501",   # line length handled by formatter
+    "B905",   # zip() strict= — stylistic; paired iterables here are equal-length by construction
+]
+
+[tool.black]
+line-length = 110
+target-version = ["py310"]

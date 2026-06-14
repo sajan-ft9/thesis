@@ -1,0 +1,28 @@
+# Runtime dependencies (pinned to versions verified on the reference environment:
+# Python 3.12, macOS arm64, CPU). For CUDA, install the matching torch build from
+# https://pytorch.org and keep the remaining pins.
+torch==2.12.0
+torchvision==0.27.0
+numpy==2.4.6
+pandas==3.0.3
+scikit-learn==1.9.0
+matplotlib==3.11.0
+seaborn==0.13.2
+pillow==12.2.0
+psutil==7.2.2
+pyyaml==6.0.3
+
+# Explainability + edge export
+grad-cam==1.5.5
+opencv-python==4.13.0.92
+onnx==1.21.0
+onnxruntime==1.26.0
+
+# Experiment tracking (optional; training degrades gracefully if absent)
+tensorboard>=2.16
+
+# Dataset download helper (optional; see data/README.md for manual alternatives)
+kagglehub>=0.3
+
+# Development / testing
+pytest>=8.0

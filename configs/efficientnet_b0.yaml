@@ -1,0 +1,8 @@
+# Primary model: EfficientNet-B0 (the proposed quantized, explainable backbone).
+extends: base.yaml
+
+experiment_name: efficientnet_b0
+
+model:
+  name: efficientnet_b0
+  freeze_stages: 5

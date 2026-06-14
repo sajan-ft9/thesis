@@ -1,0 +1,36 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "Memory-Efficient Explainable Pneumonia Detection Using Quantized EfficientNet-B0 for Resource-Constrained Healthcare Environments"
+type: software
+version: 1.0.0
+date-released: "2026-06-14"
+authors:
+  - family-names: "Maleku"
+    given-names: "Rohan"
+keywords:
+  - pneumonia detection
+  - chest X-ray
+  - deep learning
+  - EfficientNet
+  - Grad-CAM++
+  - model quantization
+  - edge AI
+  - explainable AI
+  - reproducible research
+license: MIT
+abstract: >
+  A reproducible research framework for memory-efficient, explainable pneumonia
+  detection from chest X-ray images. The framework combines a lightweight
+  EfficientNet-B0 backbone (benchmarked against ResNet-18 and MobileNetV3-Small),
+  integrated Grad-CAM++ explanations, and post-training INT8 quantization
+  (dynamic and static), with rigorous statistical reporting (bootstrap confidence
+  intervals) and correct computational-efficiency benchmarking for deployment in
+  resource-constrained healthcare settings.
+references:
+  - type: dataset
+    title: "Identifying Medical Diagnoses and Treatable Diseases by Image-Based Deep Learning"
+    authors:
+      - family-names: "Kermany"
+        given-names: "Daniel S."
+    year: 2018
+    doi: "10.1016/j.cell.2018.02.010"

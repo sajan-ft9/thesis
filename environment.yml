@@ -1,0 +1,28 @@
+# Conda environment for the pneumonia-edge-xai project.
+# Usage:  conda env create -f environment.yml  &&  conda activate pneumonia-edge-xai
+# Note: torch/torchvision are installed via pip so the correct CPU/CUDA build is
+# selected; for CUDA, replace the pip torch lines with the appropriate build.
+name: pneumonia-edge-xai
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - pip
+  - pip:
+      - torch==2.12.0
+      - torchvision==0.27.0
+      - numpy==2.4.6
+      - pandas==3.0.3
+      - scikit-learn==1.9.0
+      - matplotlib==3.11.0
+      - seaborn==0.13.2
+      - pillow==12.2.0
+      - psutil==7.2.2
+      - pyyaml==6.0.3
+      - grad-cam==1.5.5
+      - opencv-python==4.13.0.92
+      - onnx==1.21.0
+      - onnxruntime==1.26.0
+      - tensorboard>=2.16
+      - kagglehub>=0.3
+      - pytest>=8.0

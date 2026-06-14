@@ -1,0 +1,8 @@
+# Baseline model: MobileNetV3-Small (identical training pipeline for fair comparison).
+extends: base.yaml
+
+experiment_name: mobilenetv3_small
+
+model:
+  name: mobilenetv3_small
+  freeze_stages: 5

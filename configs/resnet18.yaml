@@ -1,0 +1,8 @@
+# Baseline model: ResNet-18 (identical training pipeline for fair comparison).
+extends: base.yaml
+
+experiment_name: resnet18
+
+model:
+  name: resnet18
+  freeze_stages: 5

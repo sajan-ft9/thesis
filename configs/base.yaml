@@ -1,0 +1,83 @@
+# =============================================================================
+# Base configuration shared by all experiments.
+# Model-specific configs (efficientnet_b0.yaml, resnet18.yaml, mobilenetv3.yaml)
+# inherit from this file via the `extends` key and override only what differs.
+# Every CLI in src/ accepts:  --config configs/<name>.yaml [--override key.sub=value ...]
+# =============================================================================
+
+seed: 42
+device: auto          # auto | cpu | cuda | mps
+experiment_name: efficientnet_b0_baseline
+
+data:
+  # Directory layout expected (Kermany Chest X-Ray Pneumonia dataset):
+  #   <root>/train/{NORMAL,PNEUMONIA}/*.jpeg
+  #   <root>/test/{NORMAL,PNEUMONIA}/*.jpeg
+  # The validation split is carved from train/ (stratified) — the tiny official
+  # val/ split (16 images) is NOT used for model selection (documented in thesis).
+  root: data/raw/chest_xray
+  train_dirname: train
+  test_dirname: test
+  val_split: 0.20       # fraction of train used for validation (stratified)
+  img_size: 224
+  batch_size: 32
+  num_workers: 2
+  pin_memory: true
+
+transforms:
+  norm_mean: [0.485, 0.456, 0.406]   # ImageNet statistics
+  norm_std: [0.229, 0.224, 0.225]
+  train:
+    resize: 256                       # resize then random-crop to img_size
+    random_crop: true
+    horizontal_flip: 0.5
+    rotation_degrees: 10
+    brightness: 0.2
+    contrast: 0.2
+  eval:
+    resize: 224                       # deterministic: resize only, no augmentation
+
+model:
+  name: efficientnet_b0               # efficientnet_b0 | resnet18 | mobilenetv3_small
+  pretrained: true
+  freeze_stages: 5                    # number of leading backbone blocks/stages to freeze initially
+  hidden_dim: 256
+  dropout_head: 0.3
+  dropout_classifier: 0.2
+
+train:
+  epochs: 20
+  lr: 0.0003
+  lr_min: 0.000001
+  weight_decay: 0.0001
+  warmup_epochs: 3
+  unfreeze_epoch: 8                   # epoch at which the full backbone is unfrozen
+  unfreeze_lr_scale: 0.1             # lr multiplier applied at unfreeze
+  label_smoothing: 0.05
+  early_stopping_patience: 7
+  grad_clip: 1.0
+  amp: true                          # mixed precision (only active on CUDA)
+  monitor: val_auc                   # checkpoint selection metric
+
+evaluate:
+  bootstrap_n: 1000                  # resamples for confidence intervals
+  bootstrap_alpha: 0.05              # -> 95% CI
+  threshold: 0.5
+
+benchmark:
+  warmup: 10
+  repeats: 50                        # timed single-image latency runs
+  throughput_batch_size: 32
+  device: cpu                        # efficiency targets are CPU-based (edge proxy)
+
+quantize:
+  backend: auto                      # fbgemm | qnnpack | auto (auto picks per-platform)
+  calibration_batches: 16           # batches used to calibrate static PTQ
+
+explain:
+  method: gradcampp
+  num_per_category: 4                # correct / false_positive / false_negative examples each
+
+paths:
+  models_dir: models
+  results_dir: results

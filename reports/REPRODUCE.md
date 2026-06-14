@@ -1,0 +1,99 @@
+# Reproducibility Guide
+
+This guide reproduces every result, figure, and table from raw data. It assumes a
+working `make setup` (or an equivalent environment from `requirements.txt`).
+
+## 0. Environment
+
+| Component | Reference value |
+|---|---|
+| Python | 3.12 |
+| PyTorch / torchvision | 2.12.0 / 0.27.0 |
+| scikit-learn | 1.9.0 |
+| OS (verified, CPU) | macOS arm64 |
+
+```bash
+make setup
+make test     # sanity: all tests must pass before trusting results
+```
+
+For GPU training, install the CUDA `torch` build matching your driver from
+pytorch.org, then keep the remaining pins from `requirements.txt`.
+
+## 1. Data
+
+Follow [`../data/README.md`](../data/README.md) to place the Kermany dataset at
+`data/raw/chest_xray/{train,test}/{NORMAL,PNEUMONIA}/`. Validate it:
+
+```bash
+make validate-data
+# -> results/metrics/dataset_validation.json  (class balance, duplicates, leakage)
+```
+Confirm `"clean": true` for leakage before proceeding.
+
+## 2. One-command reproduction
+
+```bash
+make reproduce
+```
+This runs, in order: `validate-data → train → train-baselines → evaluate →
+benchmark → quantize → explain → report → render`.
+
+## 3. Stage-by-stage (equivalent)
+
+```bash
+# Train primary + baselines (identical pipeline)
+python -m src.train --config configs/efficientnet_b0.yaml
+python -m src.train --config configs/resnet18.yaml
+python -m src.train --config configs/mobilenetv3.yaml
+
+# Evaluate on the held-out test set (metrics + bootstrap CIs + figures + error table)
+python -m src.evaluate --checkpoint models/efficientnet_b0_best.pth
+python -m src.evaluate --checkpoint models/resnet18_best.pth
+python -m src.evaluate --checkpoint models/mobilenetv3_small_best.pth
+
+# Efficiency benchmark (size, latency, throughput, peak RSS)
+python -m src.benchmarking --checkpoint models/efficientnet_b0_best.pth
+python -m src.benchmarking --checkpoint models/resnet18_best.pth
+python -m src.benchmarking --checkpoint models/mobilenetv3_small_best.pth
+
+# Quantization study (dynamic + static PTQ) + ONNX export
+python -m src.quantize --checkpoint models/efficientnet_b0_best.pth
+
+# Grad-CAM++ explanations (correct / FP / FN)
+python -m src.explainability --checkpoint models/efficientnet_b0_best.pth
+
+# Tables (CSV/MD/LaTeX) + limitations + future work + paper assets
+python -m src.reporting --config configs/efficientnet_b0.yaml
+
+# Fill the thesis placeholders from results
+python scripts/render_report.py --config configs/efficientnet_b0.yaml
+```
+
+## 4. Verifying outputs
+
+```bash
+ls results/metrics/      # *_test_metrics.json, *_benchmark.json, *_quantization.json, metadata
+ls results/tables/       # table1..table6 + literature template (.csv/.md/.tex)
+ls results/figures/ results/roc_curves/ results/confusion_matrices/ results/gradcam/
+cat reports/thesis_rendered.md   # render_report must report "0 pending"
+```
+
+`scripts/render_report.py` prints how many placeholders were filled and lists any
+still pending. **A submission-ready thesis has 0 pending placeholders.**
+
+## 5. Determinism notes
+
+- Seeds are fixed via `seed_everything()` (config `seed`, default 42).
+- DataLoaders use a seeded generator + `worker_init_fn`.
+- On CUDA, cuDNN runs in deterministic mode. Minor numeric differences may still
+  arise across different GPU/driver/library versions; the saved `metadata.json`
+  records the exact environment for each run.
+
+## 6. Reusing a config
+
+Override anything from the CLI, e.g. fewer epochs or a different batch size:
+```bash
+python -m src.train --config configs/efficientnet_b0.yaml \
+    --override train.epochs=15 data.batch_size=16 train.lr=0.0002
+```
