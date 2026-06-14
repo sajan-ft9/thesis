@@ -241,3 +241,33 @@ cheap; getting it credential-free is not.*
 **Recommendation: DEFER NIH external validation to future work now; revisit immediately
 if/when a Kaggle token is provided (then prefer the 224²-resized NIH or RSNA).** This keeps
 the thesis on track and avoids an acquisition-bound detour.
+
+---
+
+## 9. Rapid Multi-Dataset Survey & Final Recommendation
+
+Constraints: no retraining; existing checkpoint; inference-only; < 1 working day; minimal
+restructuring; binary Normal-vs-Pneumonia.
+
+| Dataset | Access (credential-free?) | Size | Label quality | Binary-compatible? | Code changes | Effort | Thesis value |
+|---|---|---|---|---|---|---|---|
+| **RSNA Pneumonia** | **HF PNG mirror `Baldezo313/rsna-pneumonia-dataset` — yes (3.96 GB)**; or Kaggle (token, DICOM) | ~4 GB | **High (expert-adjudicated)** | **Yes** — Normal vs Lung Opacity; exclude "No Lung Opacity/Not Normal"; different source, **no Kermany overlap** | `evaluate_directory` (~40 lines) + CSV→folder; +pydicom only on Kaggle DICOM path | **LOW–MEDIUM (<1 day)** | **HIGH** |
+| OpenI / Indiana (NLM) | Yes (`NLMCXR_png.tgz`) | ~few GB | Low for pneumonia (MeSH/report-derived; few pneumonia cases) | Weak — needs report/MeSH parsing = **relabeling** (violates rule); unstable n | report parsing + arrangement | MEDIUM | LOW–MEDIUM |
+| NIH ChestX-ray14 | Yes but 45 GB (no selective); or Kaggle 224²-resized (token, few GB) | 45 GB / few GB | Low (NLP-mined; pneumonia noisy) | Medium (No Finding vs Pneumonia-inclusive) | `evaluate_directory` + CSV filter | HIGH free / MEDIUM w/ token | MEDIUM |
+| COVID-19 Radiography DB | Kaggle (token) | ~1–4 GB | Medium **but contaminated** | ❌ **Disqualified** — its Normal & Viral-Pneumonia images are partly sourced from **Kermany** → not a valid external test for a Kermany-trained model | trivial | LOW | **~0 (misleading)** |
+
+### Single highest-value recommendation: **RSNA Pneumonia Detection Challenge**
+- **Best label quality** of all options (expert-adjudicated challenge labels) → most
+  scientifically defensible; **genuinely external** (adult, NIH-sourced, no Kermany overlap).
+- **Credential-free PNG path exists** (`Baldezo313/rsna-pneumonia-dataset`, 3.96 GB) — no
+  DICOM, no token; the **Kaggle official set is the token-backed fallback**.
+- **Binary mapping:** Normal → Normal; Lung Opacity → Pneumonia; **exclude** "No Lung
+  Opacity / Not Normal". Balance by sampling Normal to match Lung Opacity (~6 k each, or a
+  smaller balanced subset).
+- **Fits the rule:** inference-only, existing checkpoint, one ~40-line `evaluate_directory`,
+  one isolated thesis subsection → realistically **< 1 working day**.
+
+**GO/No-Go: GO with RSNA (time-boxed).** Try the credential-free HF PNG mirror first; if its
+internal structure/labels turn out unusable, fall back to the Kaggle official RSNA (token).
+COVID-19 Radiography DB is **excluded** (Kermany contamination); OpenI and NIH-free are
+weaker/heavier and remain future work.
