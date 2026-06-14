@@ -1,0 +1,32 @@
+{
+  "experiment_name": "efficientnet_b0",
+  "streaming_vs_naive": {
+    "n_train_images": 5216,
+    "img_size": 224,
+    "streaming_peak_rss_mb": 335.8,
+    "naive_full_ram_peak_rss_mb": 3140.9,
+    "naive_nominal_float32_mb": 3140.6,
+    "naive_nominal_uint8_mb": 785.2,
+    "reduction_factor": 9.4
+  },
+  "runtime_memory": {
+    "backend": "qnnpack",
+    "variants": [
+      {
+        "variant": "FP32",
+        "model_size_mb": 17.66,
+        "inference_peak_rss_mb": 979.5
+      },
+      {
+        "variant": "INT8 dynamic",
+        "model_size_mb": 16.68,
+        "inference_peak_rss_mb": 351.1
+      },
+      {
+        "variant": "INT8 static (PTQ)",
+        "model_size_mb": 5.13,
+        "inference_peak_rss_mb": 164.4
+      }
+    ]
+  }
+}

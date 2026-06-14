@@ -52,13 +52,16 @@ quantize:  ## Quantization study (dynamic + static PTQ) on the primary model
 explain:  ## Generate Grad-CAM++ explanations for correct / FP / FN cases
 	$(PYTHON) -m src.explainability --checkpoint $(CKPT)
 
+memory:  ## Memory-footprint analysis (streaming vs naive RAM; per-precision RSS)
+	$(PYTHON) -m src.memory_profile --config $(PRIMARY) --checkpoint $(CKPT)
+
 report:  ## Generate all tables + report artifacts from results
 	$(PYTHON) -m src.reporting --config $(PRIMARY)
 
 render:  ## Fill thesis placeholders with computed results
 	$(PYTHON) scripts/render_report.py --config $(PRIMARY)
 
-reproduce: validate-data train train-baselines evaluate benchmark quantize explain report render  ## Full pipeline on the real dataset
+reproduce: validate-data train train-baselines evaluate benchmark quantize explain memory report render  ## Full pipeline on the real dataset
 
 clean:  ## Remove generated results (keeps directory structure)
 	find results -type f ! -name '.gitkeep' -delete

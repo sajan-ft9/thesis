@@ -69,10 +69,11 @@ byte-identical duplicate images** that would otherwise have leaked between the t
 and validation splits. Among architectures, all three exceed 0.95 AUC, but
 EfficientNet-B0 provides the **best precision/specificity balance** (38 false
 positives versus 72 and 77 for ResNet-18 and MobileNetV3-Small). **Static INT8
-quantization** compresses the model from **17.66 MB to 5.13 MB (−71%)** and reduces
-CPU latency ~8× (≈120 ms → ≈15 ms per image) for a 2.34-percentage-point AUC cost,
-whereas **dynamic INT8** preserves accuracy but compresses by only ~6%. The
-measured peak process memory during inference is **≈315 MB**.
+quantization** compresses the model from **17.66 MB to 5.13 MB (−71%)**, reduces CPU
+latency ~8× (≈120 ms → ≈15 ms per image), and cuts **peak inference memory ≈6×
+(979.5 → 164.4 MB)** for a 2.34-percentage-point AUC cost, whereas **dynamic INT8**
+preserves accuracy but compresses by only ~6%. The lazy streaming data pipeline uses
+**9.4× less RAM** than naïve full-dataset loading (335.8 MB vs 3,140.9 MB).
 
 **Conclusion.** Competitive pneumonia screening is achievable within tight resource
 budgets when a lightweight architecture, integrated explainability, and an
@@ -428,26 +429,55 @@ cross-platform deployment artefact.
 
 ### 4.4 Computational Efficiency
 
-| Metric (EfficientNet-B0, FP32, CPU) | Value |
-|---|---|
-| Model size on disk | 17.66 MB |
-| Inference latency (mean) | 119.7 ms / image |
-| Inference latency (95th percentile) | 120.6 ms / image |
-| Throughput (batch = 32) | 19.0 images / s |
-| Peak process RSS during inference | 314.8 MB |
+**Speed and size (EfficientNet-B0, CPU):**
 
-*Table 4.4: Efficiency metrics measured with warm-up-corrected repeated timing and
-psutil RSS sampling (not tracemalloc).*
+| Metric | FP32 | INT8 static (PTQ) |
+|---|---|---|
+| Model size on disk | 17.66 MB | 5.13 MB |
+| Inference latency (mean) | 119.7 ms/image | 15.0 ms/image |
+| Inference latency (95th pct) | 120.6 ms/image | — |
+| Throughput (batch = 32) | 19.0 images/s | — |
 
-**Interpretation.** The model's on-disk size (17.66 MB FP32; 5.13 MB static INT8) is
-well within the < 50 MB target. The peak inference memory (≈315 MB) reflects the true
-footprint of the model, a batch, and the runtime libraries — a realistic figure for
-provisioning edge devices, in contrast to the meaningless sub-megabyte values that a
-Python-only allocation tracker would report. FP32 single-image CPU latency (≈120 ms)
-exceeds the 100 ms reference target on this general-purpose CPU, **but static INT8
-quantization reduces it to ≈15 ms**, comfortably meeting the target; this is precisely
-the deployment motivation for quantization. (Reported CPU figures are an edge proxy;
-on-device measurement is future work.)
+*Table 4.4: Speed and storage, measured with warm-up-corrected repeated timing.*
+
+FP32 single-image CPU latency (≈120 ms) exceeds the 100 ms reference target on this
+general-purpose CPU, **but static INT8 quantization reduces it to ≈15 ms (~8×)**,
+comfortably meeting the target — precisely the deployment motivation for quantization.
+(CPU figures are an edge proxy; on-device measurement is future work.)
+
+#### 4.4.1 Memory-Footprint Analysis
+
+Because memory — not raw compute — is typically the binding constraint on
+resource-constrained hardware, we measure peak process resident-set size (RSS)
+directly with psutil sampling (never `tracemalloc`, which tracks only Python-level
+allocations and would report misleading sub-megabyte values). Two measurements
+substantiate the memory-efficiency contribution.
+
+**(a) Streaming vs. naïve loading.** Iterating the lazy, path-based DataLoader for one
+pass over the training set peaks at **335.8 MB**, whereas pre-loading the same 5,216
+images into a single in-RAM float32 tensor (the common non-streaming pattern) peaks at
+**3,140.9 MB** — a **9.4× reduction**. The naïve figure matches the nominal tensor
+size (3,140.6 MB), validating the measurement. This lazy pipeline is the core enabler
+of operation on low-memory hardware.
+
+**(b) Runtime memory by precision.** Peak RSS during a full test-set inference pass,
+measured identically per variant:
+
+| Variant | Model weights (MB) | Peak inference RSS (MB) |
+|---|---|---|
+| FP32 | 17.66 | 979.5 |
+| INT8 dynamic | 16.68 | 351.1 |
+| **INT8 static (PTQ)** | **5.13** | **164.4** |
+
+*Table 4.5: Model and runtime memory by precision (EfficientNet-B0, CPU). See
+`results/figures/memory_footprint.png`.*
+
+**Static INT8 quantization reduces not only the stored model (3.4×) but the peak
+inference memory by ≈6× (979.5 → 164.4 MB)**, because activations as well as weights
+are represented in INT8; dynamic INT8 (linear-only) gives an intermediate runtime
+footprint with negligible storage savings. Combined with the streaming loader, the
+deployed static-INT8 configuration operates within a small, predictable memory budget
+appropriate for resource-constrained healthcare settings.
 
 ### 4.5 Explainability
 
@@ -556,11 +586,13 @@ evaluated with deliberate measurement rigour. On the held-out Kermany test set t
 model achieves **ROC-AUC 0.9678 (95% CI 0.9504–0.9816)**, **sensitivity 0.9667**, and
 the best precision/specificity balance among three architectures trained under an
 identical pipeline. **Static INT8 quantization** produces a **5.13 MB (−71%) model with
-~8× faster CPU inference** for a 2.3-point AUC cost, and **Grad-CAM++** provides
-prediction-level visual explanations. Crucially, the accompanying pipeline detected and
-removed real train↔validation data leakage, benchmarks efficiency correctly, and
-contains no simulated or fabricated results — making the findings defensible and
-reproducible.
+~8× faster CPU inference and ≈6× lower peak inference memory (979.5 → 164.4 MB)** for a
+2.3-point AUC cost; together with a lazy streaming data pipeline that uses **9.4× less
+RAM** than naïve full-dataset loading, the system operates within a small, predictable
+memory budget. **Grad-CAM++** provides prediction-level visual explanations. Crucially,
+the accompanying pipeline detected and removed real train↔validation data leakage,
+benchmarks efficiency correctly, and contains no simulated or fabricated results —
+making the findings defensible and reproducible.
 
 ### 6.2 Future Work
 
