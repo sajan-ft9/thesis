@@ -110,7 +110,25 @@ real-world impact of such systems:
 3. **Opacity.** The "black-box" nature of deep models impedes clinical trust, since
    practitioners cannot inspect the basis of a prediction [7].
 
-### 1.2 Research Objectives
+### 1.2 Problem Statement
+
+Three coupled problems prevent current pneumonia-CXR models from being trusted and
+deployed in resource-constrained settings. First, **high-capacity models are accurate
+but impractical**: architectures such as CheXNet require tens of millions of parameters
+and large memory/compute budgets unsuited to point-of-care or edge hardware. Second,
+**lightweight and edge-oriented studies typically optimise and report accuracy alone** —
+without confidence intervals, data-leakage control, a comparison of quantization
+schemes, a memory-footprint analysis, or any explanation of model decisions — so their
+reliability and deployment readiness cannot be judged. Third, **medical-imaging results
+are frequently irreproducible and silently contaminated** by duplicate or patient-level
+data leakage, which inflates reported performance.
+
+The problem this thesis addresses is therefore: *how to detect pneumonia from chest
+X-rays with a model that is simultaneously accurate, memory- and compute-efficient,
+explainable, and evaluated honestly and reproducibly* — closing the gap between reported
+accuracy and genuine, deployable, trustworthy performance.
+
+### 1.3 Research Objectives
 
 This thesis pursues four objectives, framed as *measurable targets*, not assumed
 outcomes:
@@ -127,7 +145,49 @@ outcomes:
 4. **Reproducibility.** Provide a fully scripted, seed-controlled, configuration-
    driven pipeline whose every reported number is regenerable from raw data.
 
-### 1.3 Contributions
+### 1.4 Research Questions
+
+The objectives are addressed through four research questions (RQ), each mapped to an
+objective and answered in the indicated chapter:
+
+- **RQ1 (Performance).** Can a lightweight EfficientNet-B0, evaluated with bootstrap
+  confidence intervals and explicit leakage control, achieve ROC-AUC ≥ 0.95 for binary
+  pneumonia detection on a held-out test set, and how does it compare with ResNet-18 and
+  MobileNetV3-Small trained under an identical pipeline? *(Chapter 4.1–4.2)*
+- **RQ2 (Efficiency).** To what extent can post-training INT8 quantization (dynamic vs.
+  static) reduce model size, inference latency, and peak memory, and at what cost to
+  diagnostic accuracy? *(Chapter 4.3–4.4)*
+- **RQ3 (Explainability).** Do Grad-CAM++ explanations highlight clinically plausible
+  regions for correct and incorrect predictions, supporting error analysis and
+  human-in-the-loop oversight? *(Chapter 4.5–4.6)*
+- **RQ4 (Reproducibility).** Can the complete pipeline be made fully reproducible —
+  seeded, tested, and regenerable from raw data — with no fabricated or simulated
+  results? *(Chapter 3; Appendix A)*
+
+### 1.5 Scope and Delimitations
+
+This study is deliberately bounded so that every claim is measurable: (i) the task is
+**binary** pneumonia-vs-normal classification (not multi-disease or lesion
+localization); (ii) evaluation uses the **Kermany pediatric** dataset, with external
+datasets left to future work; (iii) compression uses **post-training quantization**
+(dynamic and static INT8), not quantization-aware training; (iv) efficiency is measured
+on **workstation CPU/GPU as an edge proxy**, not on physical Raspberry Pi / Jetson
+hardware; and (v) explainability is assessed **qualitatively**, without a radiologist
+reader study. The corresponding limitations are discussed in Section 5.3.
+
+### 1.6 Significance of the Study
+
+The work is significant on three levels. **Practically**, it shows that accurate
+pneumonia screening can run within a small, predictable memory and storage budget,
+supporting deployment where specialist radiology is scarce. **Methodologically**, it
+provides a template for *honest* medical-AI evaluation — duplicate/leakage checking,
+confidence intervals, correct memory benchmarking, and a transparent quantization
+trade-off — countering the accuracy-only, often-irreproducible reporting common in the
+field. **For open science**, the released code, tests, and reproducibility manifests let
+others replicate and extend the results, establishing the foundation for the doctoral
+directions in Chapter 6.
+
+### 1.7 Contributions
 
 1. **An integrated, reproducible framework** combining EfficientNet-B0, Grad-CAM++,
    and INT8 quantization, with a *fair* baseline comparison against ResNet-18 and
@@ -145,7 +205,7 @@ outcomes:
 5. **Open, non-fabricated artefacts**: configurations, unit/integration tests,
    per-run reproducibility manifests, and auto-generated tables and figures.
 
-### 1.4 Thesis Structure
+### 1.8 Thesis Structure
 
 Chapter 2 reviews related work; Chapter 3 details the methodology; Chapter 4 reports
 results; Chapter 5 discusses clinical implications and limitations; Chapter 6
