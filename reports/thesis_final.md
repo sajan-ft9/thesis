@@ -118,9 +118,10 @@ outcomes:
 1. **Diagnostic performance.** Train and rigorously evaluate a lightweight CXR
    pneumonia classifier, reporting metrics with confidence intervals rather than
    point estimates alone (reference target: ROC-AUC ≥ 0.95).
-2. **Computational efficiency.** Quantify model size, inference latency, and
-   throughput, and reduce them via post-training quantization suitable for edge
-   deployment (reference targets: model size < 50 MB; CPU latency < 100 ms/image).
+2. **Computational efficiency.** Quantify model size, **peak memory (RAM)**, inference
+   latency, and throughput, and reduce them via post-training quantization suitable for
+   edge deployment (reference targets: model size < 50 MB; CPU latency < 100 ms/image;
+   peak inference RAM < 2 GB).
 3. **Explainability.** Integrate Grad-CAM++ to visualise the regions driving each
    prediction, including failure cases, to support qualitative error analysis.
 4. **Reproducibility.** Provide a fully scripted, seed-controlled, configuration-
@@ -171,7 +172,16 @@ tasks. MobileNetV2/V3 [12] and EfficientNet [13] use depthwise-separable
 convolutions and compound scaling to reduce parameters while retaining accuracy.
 EfficientNet-B0 in particular offers a strong accuracy/efficiency trade-off with
 roughly five million parameters, making it a compelling backbone for
-resource-constrained applications [14].
+resource-constrained applications [14]. Recent pneumonia-specific work confirms this:
+Benmalek et al. [25] benchmark five lightweight CNNs (ResNet-18, MobileNet,
+ShuffleNet, SqueezeNet, EfficientNet-B0) on the same pediatric CXR data and deploy the
+best model on an NVIDIA Jetson Nano, reporting F1-scores of ~94–96% (MobileNet 95.7%,
+EfficientNet-B0 95.1%, ResNet-18 94.4%), and custom efficient designs such as PneuNet
+[26] reach comparable accuracy with fewer parameters. These results — consistent with
+the present study's measured F1 of 0.937 — establish that lightweight backbones are
+already sufficient for this task; the open question is therefore no longer *whether* a
+small model works, but **how honestly it is evaluated and how efficiently it can be
+deployed** (Sections 2.4–2.5).
 
 ### 2.3 Explainable AI in Clinical Decision Support
 
@@ -201,8 +211,11 @@ Individual ingredients — lightweight architectures, XAI, and quantization — 
 well studied in isolation. What remains uncommon is an *integrated*, *correctly
 benchmarked*, and *fully reproducible* pipeline that jointly reports diagnostic
 performance, efficiency, and explainability for constrained CXR deployment, while
-being explicit about data integrity and measurement methodology. This thesis targets
-that gap.
+being explicit about data integrity and measurement methodology. Notably, even recent
+edge-deployment studies on this dataset (e.g. Benmalek et al. [25]) report accuracy/F1
+alone — without confidence intervals, data-leakage control, a dynamic-versus-static
+quantization comparison, or any measurement of memory footprint or whether compression
+preserves the model's explanations. This thesis targets that gap.
 
 ---
 
@@ -554,15 +567,23 @@ These limitations are stated explicitly and are not hidden:
 |---|---|---|---|---|---|---|
 | Rajpurkar et al. [4] | CheXNet (DenseNet-121) | ~28 M | No | No | No | Partial |
 | Wang et al. [14] | EfficientNet-B0 | ~5.3 M | Post-hoc Grad-CAM | No | Partial | Partial |
-| **This work** | **EfficientNet-B0 (+ ResNet-18, MobileNetV3-Small)** | **4.34 M** | **Integrated Grad-CAM++ (correct/FP/FN)** | **Dynamic + static INT8** | **Yes (size/latency/RSS)** | **Yes (tests + manifests)** |
+| Benmalek et al. [25] | 5 lightweight CNNs (incl. EfficientNet-B0) | ~1–11 M | No | TensorRT (not compared) | **Yes (Jetson Nano)** | Partial (F1 only) |
+| PneuNet [26] | Custom lightweight CNN | < 5 M | No | No | Partial | Partial |
+| **This work** | **EfficientNet-B0 (+ ResNet-18, MobileNetV3-Small)** | **4.34 M** | **Integrated Grad-CAM++ (correct/FP/FN)** | **Dynamic + static INT8 (compared)** | **Yes (size/latency/RSS)** | **Yes (CIs, tests, manifests)** |
 
 *Table 5.1: Qualitative positioning. ROC-AUC values are intentionally omitted from
 cross-study comparison because they are reported on different datasets and splits and
 are therefore not directly comparable; our measured AUCs appear in Tables 4.1–4.2.*
 
 This work's distinguishing features are the *combination* of integrated explainability,
-a real dynamic-versus-static quantization study, correct efficiency benchmarking, and a
-reproducible, integrity-checked pipeline — rather than any single record metric.
+a real dynamic-versus-static quantization study, correct efficiency benchmarking
+(including memory), and a reproducible, integrity-checked pipeline — rather than any
+single record metric. The closest prior study, Benmalek et al. [25], shares the
+backbone set and edge motivation and additionally provides on-device (Jetson) timing
+that this work approximates with a CPU proxy; conversely, the present study adds the
+data-leakage control, confidence intervals, quantization-scheme comparison,
+explainability, and memory analysis that [25] does not report. The two are therefore
+complementary, and on-device benchmarking is the natural next step (Section 6.2).
 
 ### 5.5 Ethical Considerations
 
@@ -647,6 +668,8 @@ responsible translation of medical AI to underserved settings.
 22. Kermany DS, et al. Identifying Medical Diagnoses and Treatable Diseases by Image-Based Deep Learning. *Cell*. 2018;172(5):1122-1131.e9.
 23. Pepe MS. The Statistical Evaluation of Medical Tests for Classification and Prediction. Oxford University Press; 2003.
 24. Efron B, Tibshirani RJ. An Introduction to the Bootstrap. Chapman & Hall; 1993.
+25. Benmalek E, Rhalem W, Jbabi A, et al. Edge-based real-time diagnosis of pediatric pneumonia using lightweight CNNs and chest X-rays. *Research on Biomedical Engineering*. 2025;41:Art. 60. doi:10.1007/s42600-025-00437-z.
+26. Saranyaraj D, Shrinaath V, Nayak A, Vishal R. PneuNet: a lightweight convolutional neural network with multiscale feature fusion for automated pneumonia detection from chest X-rays. *Frontiers in Medicine*. 2026.
 
 ---
 
