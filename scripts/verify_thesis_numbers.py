@@ -58,6 +58,20 @@ def main() -> int:
         ("duplicates removed", f"{dv['n_train_duplicates_removed']} byte-identical"),
     ]
 
+    # External validation (RSNA) — included only if that experiment has been run.
+    rsna_path = METRICS / "rsna_external_metrics.json"
+    if rsna_path.exists():
+        r = json.loads(rsna_path.read_text(encoding="utf-8"))
+        rm, rci = r["metrics"], r["confidence_intervals"]
+        checks += [
+            ("RSNA AUC", f"{rm['auc']:.4f}"),
+            ("RSNA AUC CI low", f"{rci['auc']['low']:.4f}"),
+            ("RSNA AUC CI high", f"{rci['auc']['high']:.4f}"),
+            ("RSNA sensitivity", f"{rm['sensitivity']:.4f}"),
+            ("RSNA specificity", f"{rm['specificity']:.4f}"),
+            ("RSNA F1", f"{rm['f1']:.4f}"),
+        ]
+
     failures = []
     for label, expected in checks:
         ok = expected in text

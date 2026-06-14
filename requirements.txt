@@ -24,5 +24,8 @@ tensorboard>=2.16
 # Dataset download helper (optional; see data/README.md for manual alternatives)
 kagglehub>=0.3
 
+# Optional: external-validation only (RSNA DICOM->PNG conversion in scripts/build_rsna_subset.py)
+pydicom>=3.0
+
 # Development / testing
 pytest>=8.0

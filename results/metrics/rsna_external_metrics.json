@@ -1,0 +1,55 @@
+{
+  "tag": "rsna_external",
+  "checkpoint": "models/efficientnet_b0_best.pth",
+  "image_dir": "data/processed/rsna_external",
+  "n_images": 12024,
+  "n_normal": 6012,
+  "n_pneumonia": 6012,
+  "threshold": 0.5,
+  "metrics": {
+    "accuracy": 0.7806054557551564,
+    "precision": 0.7079635108481263,
+    "recall": 0.9552561543579507,
+    "sensitivity": 0.9552561543579507,
+    "specificity": 0.6059547571523619,
+    "f1": 0.813225715094874,
+    "auc": 0.8892347678783042,
+    "tp": 5743,
+    "tn": 3643,
+    "fp": 2369,
+    "fn": 269,
+    "threshold": 0.5,
+    "n": 12024
+  },
+  "confidence_intervals": {
+    "accuracy": {
+      "point": 0.7806054557551564,
+      "low": 0.7732846806387225,
+      "high": 0.7886726546906188
+    },
+    "auc": {
+      "point": 0.8892347678783042,
+      "low": 0.8825492327936659,
+      "high": 0.8953797453213003
+    },
+    "n_boot": 1000,
+    "alpha": 0.05
+  },
+  "youden_threshold": {
+    "threshold": 0.927191972732544,
+    "sensitivity": 0.8794078509647372,
+    "specificity": 0.8255156353958749,
+    "youden_j": 0.7049234863606121
+  },
+  "figures": {
+    "confusion_matrix": {
+      "png": "results/confusion_matrices/rsna_external_confusion_matrix.png",
+      "pdf": "results/confusion_matrices/rsna_external_confusion_matrix.pdf"
+    },
+    "roc_curve": {
+      "png": "results/roc_curves/rsna_external_roc_curve.png",
+      "pdf": "results/roc_curves/rsna_external_roc_curve.pdf"
+    }
+  },
+  "note": "Exploratory external validation; existing trained checkpoint, inference only, no tuning."
+}

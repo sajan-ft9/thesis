@@ -19,11 +19,13 @@ from typing import Any
 import numpy as np
 import pandas as pd
 from sklearn.metrics import classification_report, confusion_matrix
+from torch.utils.data import DataLoader
 
 from .config import Config
-from .dataset import CLASS_NAMES, build_dataloaders
+from .dataset import CLASS_NAMES, ChestXRayDataset, build_dataloaders, scan_split
 from .inference import collect_predictions, load_checkpoint
 from .metrics import compute_metrics, metric_confidence_intervals, youden_threshold
+from .transforms import build_eval_transform
 from .utils import ensure_dir, get_device, get_logger, save_json
 
 logger = get_logger("evaluate")
@@ -116,12 +118,79 @@ def evaluate_checkpoint(
     return summary
 
 
+def evaluate_directory(
+    checkpoint_path: str | Path,
+    image_dir: str | Path,
+    tag: str = "external",
+    device_str: str = "auto",
+    cfg: Config | None = None,
+) -> dict[str, Any]:
+    """Inference-only evaluation on an external directory of ``{NORMAL,PNEUMONIA}/*`` images.
+
+    Uses the existing trained checkpoint **as-is** (no retraining, fine-tuning, or threshold
+    re-optimisation) and the same deterministic eval transform. Writes results under a
+    separate ``<tag>`` namespace so existing (Kermany) results are never overwritten.
+    Intended for *exploratory external validation*.
+    """
+    device = get_device(device_str)
+    model, ckpt_cfg = load_checkpoint(checkpoint_path, device)
+    cfg = cfg or ckpt_cfg
+
+    samples = scan_split(image_dir)
+    dataset = ChestXRayDataset(samples, build_eval_transform(cfg), name=tag)
+    loader = DataLoader(dataset, batch_size=cfg.data.batch_size, shuffle=False, num_workers=cfg.data.num_workers)
+    y_true, y_prob, _ = collect_predictions(model, loader, device, cfg.evaluate.threshold)
+
+    metrics = compute_metrics(y_true, y_prob, cfg.evaluate.threshold)
+    cis = metric_confidence_intervals(
+        y_true, y_prob, cfg.evaluate.bootstrap_n, cfg.evaluate.bootstrap_alpha, cfg.seed, cfg.evaluate.threshold
+    )
+    youden = youden_threshold(y_true, y_prob)
+
+    results_dir = Path(cfg.paths.results_dir)
+    metrics_dir = ensure_dir(results_dir / "metrics")
+    from .visualization import plot_confusion_matrix, plot_roc_curve
+
+    cm = confusion_matrix(y_true, (y_prob >= cfg.evaluate.threshold).astype(int), labels=[0, 1])
+    fig_cm = plot_confusion_matrix(cm, CLASS_NAMES, results_dir / "confusion_matrices", stem=f"{tag}_confusion_matrix")
+    fig_roc = plot_roc_curve(y_true, y_prob, results_dir / "roc_curves", stem=f"{tag}_roc_curve")
+
+    summary = {
+        "tag": tag,
+        "checkpoint": str(checkpoint_path),
+        "image_dir": str(image_dir),
+        "n_images": int(len(y_true)),
+        "n_normal": int((y_true == 0).sum()),
+        "n_pneumonia": int((y_true == 1).sum()),
+        "threshold": cfg.evaluate.threshold,
+        "metrics": metrics,
+        "confidence_intervals": cis,
+        "youden_threshold": youden,
+        "figures": {"confusion_matrix": fig_cm, "roc_curve": fig_roc},
+        "note": "Exploratory external validation; existing trained checkpoint, inference only, no tuning.",
+    }
+    save_json(summary, metrics_dir / f"{tag}_metrics.json")
+    logger.info(
+        "[%s] n=%d (N=%d, P=%d) | AUC=%.4f (95%% CI %.4f-%.4f) | Acc=%.4f | Sens=%.4f | Spec=%.4f | F1=%.4f",
+        tag, summary["n_images"], summary["n_normal"], summary["n_pneumonia"],
+        metrics["auc"], cis["auc"]["low"], cis["auc"]["high"],
+        metrics["accuracy"], metrics["sensitivity"], metrics["specificity"], metrics["f1"],
+    )
+    return summary
+
+
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Evaluate a trained checkpoint on the test set.")
+    parser = argparse.ArgumentParser(description="Evaluate a trained checkpoint on the test set or an external directory.")
     parser.add_argument("--checkpoint", required=True, help="Path to a *_best.pth checkpoint.")
     parser.add_argument("--device", default="auto")
+    parser.add_argument("--external-dir", default=None,
+                        help="If set, run inference-only external evaluation on this {NORMAL,PNEUMONIA} directory.")
+    parser.add_argument("--tag", default="external", help="Namespace for external-eval outputs (default: external).")
     args = parser.parse_args()
-    evaluate_checkpoint(args.checkpoint, device_str=args.device)
+    if args.external_dir:
+        evaluate_directory(args.checkpoint, args.external_dir, tag=args.tag, device_str=args.device)
+    else:
+        evaluate_checkpoint(args.checkpoint, device_str=args.device)
 
 
 if __name__ == "__main__":

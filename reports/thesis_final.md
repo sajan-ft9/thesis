@@ -73,7 +73,10 @@ quantization** compresses the model from **17.66 MB to 5.13 MB (−71%)**, reduc
 latency ~8× (≈120 ms → ≈15 ms per image), and cuts **peak inference memory ≈6×
 (979.5 → 164.4 MB)** for a 2.34-percentage-point AUC cost, whereas **dynamic INT8**
 preserves accuracy but compresses by only ~6%. The lazy streaming data pipeline uses
-**9.4× less RAM** than naïve full-dataset loading (335.8 MB vs 3,140.9 MB).
+**9.4× less RAM** than naïve full-dataset loading (335.8 MB vs 3,140.9 MB). In an
+exploratory zero-shot test on the independent **RSNA** dataset (adult), the model retains a
+ROC-AUC of **0.889** — a modest, expected drop under domain shift, providing initial
+evidence of external generalization.
 
 **Conclusion.** Competitive pneumonia screening is achievable within tight resource
 budgets when a lightweight architecture, integrated explainability, and an
@@ -595,6 +598,52 @@ rather than borderline, indicating genuinely difficult or atypical radiographs r
 than threshold ambiguity. Coupling probability outputs with Grad-CAM++ overlays lets a
 clinician triage and review such cases, supporting a safe human-in-the-loop workflow.
 
+### 4.7 Exploratory External Validation on RSNA Pneumonia Dataset
+
+The purpose of this experiment is **not to establish clinical validity**, but to evaluate
+whether the trained model exhibits any degree of generalization on an independent external
+dataset collected under different conditions. It is **supplementary evidence only**: the
+primary evaluation remains the Kermany held-out test set (§4.1), and no result in §4.1–4.6
+is altered by it.
+
+**Protocol.** The EfficientNet-B0 checkpoint trained on Kermany is applied **as-is**
+(inference only; no retraining, fine-tuning, or threshold re-optimisation) to a balanced
+subset of the **RSNA Pneumonia Detection Challenge** dataset — a different population
+(adult vs. Kermany's pediatric), institution, and acquisition pipeline, with
+expert-adjudicated labels. A deliberately simple, exploratory binary mapping is used:
+RSNA "Normal" → Normal; RSNA "Lung Opacity" → Pneumonia; the ambiguous "No Lung Opacity /
+Not Normal" class is excluded. The subset is balanced at 6,012 images per class (12,024
+total; seed 42) and evaluated at the same fixed 0.5 threshold used throughout.
+
+**Results (zero-shot, n = 12,024):**
+
+| Metric | RSNA (external) | Kermany (internal, §4.1) |
+|---|---|---|
+| ROC-AUC | **0.8892** (95% CI 0.8825–0.8954) | 0.9678 (95% CI 0.9504–0.9816) |
+| Accuracy | 0.7806 (95% CI 0.7733–0.7887) | 0.9183 |
+| Sensitivity | 0.9553 | 0.9667 |
+| Specificity | 0.6060 | 0.8376 |
+| F1 | 0.8132 | 0.9366 |
+
+*Table 4.6: Zero-shot external validation on RSNA vs. internal Kermany performance. RSNA
+figures use the Kermany-trained checkpoint with no tuning. See
+`results/roc_curves/rsna_external_roc_curve.png` and
+`results/confusion_matrices/rsna_external_confusion_matrix.png`.*
+
+**Interpretation.** Under a substantial domain shift (pediatric → adult; different
+institutions and scanners), the model retains **reasonable discriminative ability**
+(AUC 0.889) and **high sensitivity** (0.955), while specificity falls to 0.606 — i.e. it
+still detects pneumonia but produces more false positives on adult normal radiographs. The
+~0.08 AUC reduction relative to the internal test set is the **expected** consequence of
+domain shift and is reported honestly; no attempt was made to optimise the external score.
+That the underlying separation remains strong is corroborated by the operating-point
+analysis: a threshold of 0.927 (computed on RSNA **for context only and not applied**)
+would rebalance to sensitivity 0.879 / specificity 0.826 — indicating the lower
+default-threshold specificity is partly a calibration effect rather than lost separability.
+This exploratory result provides initial, supplementary evidence that the model generalizes
+to an independent dataset; rigorous external and clinical validation remain future work
+(§6.2).
+
 ---
 
 ## Chapter 5: Discussion
@@ -625,9 +674,10 @@ These limitations are stated explicitly and are not hidden:
 1. **Single-dataset evaluation.** All data come from the single-institution Kermany
    pediatric cohort; results may not transfer to other scanners, protocols, age groups,
    or hospitals.
-2. **No external validation.** The model has not been evaluated on an independent
-   dataset (e.g., NIH ChestX-ray14, CheXpert); reported metrics reflect in-distribution
-   performance only.
+2. **Limited external validation.** The model was evaluated zero-shot on a single
+   independent dataset (RSNA, §4.7) as an exploratory probe with a simple label mapping;
+   it has not been validated on further datasets (e.g., NIH ChestX-ray14, CheXpert), nor
+   with patient-level/multi-centre protocols or a clinical reader study.
 3. **No clinical / reader-study validation.** No prospective study or radiologist
    reader study was conducted. Grad-CAM++ outputs are model-derived and were **not**
    validated against expert annotations; no trust or alignment scores are claimed or
@@ -690,7 +740,9 @@ identical pipeline. **Static INT8 quantization** produces a **5.13 MB (−71%) m
 ~8× faster CPU inference and ≈6× lower peak inference memory (979.5 → 164.4 MB)** for a
 2.3-point AUC cost; together with a lazy streaming data pipeline that uses **9.4× less
 RAM** than naïve full-dataset loading, the system operates within a small, predictable
-memory budget. **Grad-CAM++** provides prediction-level visual explanations. Crucially,
+memory budget. An exploratory zero-shot test on the independent **RSNA** dataset
+(AUC 0.889) gives initial evidence of external generalization under domain shift.
+**Grad-CAM++** provides prediction-level visual explanations. Crucially,
 the accompanying pipeline detected and removed real train↔validation data leakage,
 benchmarks efficiency correctly, and contains no simulated or fabricated results —
 making the findings defensible and reproducible.
