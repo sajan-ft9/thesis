@@ -187,23 +187,35 @@ field. **For open science**, the released code, tests, and reproducibility manif
 others replicate and extend the results, establishing the foundation for the doctoral
 directions in Chapter 6.
 
-### 1.7 Contributions
+### 1.7 Research Contributions
 
-1. **An integrated, reproducible framework** combining EfficientNet-B0, Grad-CAM++,
-   and INT8 quantization, with a *fair* baseline comparison against ResNet-18 and
-   MobileNetV3-Small under an identical training/evaluation pipeline.
-2. **A data-integrity methodology** that automatically detects byte-identical
-   duplicate images and quantifies train/validation/test leakage — and that, on this
-   dataset, removed 26 duplicates causing train↔validation leakage.
-3. **A transparent quantization study** that contrasts dynamic and static INT8 and
-   reports the accuracy/size/latency trade-off honestly, including a methodological
-   finding: naïve per-tensor static quantization collapses EfficientNet-B0, whereas
-   per-channel weight quantization recovers it.
-4. **A correct efficiency-benchmarking methodology** (on-disk size; warm-up-corrected
-   repeated latency; throughput; sampled peak process memory) that avoids the common
-   error of using `tracemalloc` as a memory metric.
-5. **Open, non-fabricated artefacts**: configurations, unit/integration tests,
-   per-run reproducibility manifests, and auto-generated tables and figures.
+The overarching contribution of this thesis is **not a new pneumonia classifier** but a
+**reproducible, integrity-checked, deployment- and memory-oriented methodology** for
+medical image classification, demonstrated on pneumonia CXR. It comprises five explicit,
+independently useful contributions:
+
+1. **Data-integrity contribution.** An automatic check that detects byte-identical
+   duplicate images and quantifies train/validation/test leakage by path and content
+   hash; on this dataset it removed 26 duplicates causing train↔validation leakage and
+   verified content-disjoint splits (§3.1) — rigour most CXR studies omit.
+2. **Reproducibility contribution.** A fully scripted, seed-controlled,
+   configuration-driven pipeline with unit/integration tests and per-run manifests, so
+   every reported number and figure is regenerable from raw data with one command
+   (`make reproduce`).
+3. **Explainability contribution.** Integrated Grad-CAM++ explanations for correctly
+   classified, false-positive, and false-negative cases, used for genuine error analysis
+   — with **no simulated survey or trust score** anywhere (§3.5, §4.5–4.6).
+4. **Quantization contribution.** A transparent dynamic-versus-static INT8 comparison,
+   including the practical finding that **per-channel** (not per-tensor) weight
+   quantization is required to keep EfficientNet-B0 from collapsing (§4.3).
+5. **Deployment-efficiency contribution.** A correct efficiency methodology — on-disk
+   size, warm-up-corrected latency, throughput, and **sampled peak memory (RSS, not
+   `tracemalloc`)** — quantifying a 71% smaller, ~6× lower-memory, ~8× faster model and a
+   9.4× lower-RAM data pipeline (§4.4).
+
+Together these support a fair three-architecture comparison (EfficientNet-B0 vs.
+ResNet-18 vs. MobileNetV3-Small) under an identical pipeline, and frame the work as a
+template for honest, deployable medical AI rather than a single-model accuracy result.
 
 ### 1.8 Thesis Structure
 
@@ -463,9 +475,17 @@ corrected runs); size is the serialised FP32 state dict.*
    ResNet-18 and MobileNetV3-Small produce **72 and 77 false positives** (specificity
    0.69 and 0.67), versus **38 for EfficientNet-B0** (specificity 0.84). EfficientNet-B0
    gives the **best precision/specificity balance and highest F1**, making it the most
-   clinically usable operating point and the proposed backbone, while MobileNetV3-Small
-   is the recommended choice when minimum size is paramount and false positives are
-   acceptable.
+   clinically usable operating point and the proposed backbone.
+
+**Why EfficientNet-B0 and not MobileNetV3-Small?** Although MobileNetV3-Small edges out
+EfficientNet-B0 on AUC (0.974 vs. 0.968) at a smaller size, it roughly **doubles the
+false-positive rate** (77 vs. 38; specificity 0.67 vs. 0.84). For a screening tool that
+clinicians must trust, an excess of false alarms — not a 0.6-point AUC difference — is
+the decisive factor: EfficientNet-B0 is therefore selected as the default, and
+MobileNetV3-Small is positioned as the **minimum-footprint alternative** for the most
+storage-constrained settings where a higher false-positive rate is acceptable. (A
+deployment could also select MobileNetV3-Small and recover specificity via threshold
+tuning; both operating points are reported for transparency.)
 
 ### 4.3 Quantization Results
 

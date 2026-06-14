@@ -61,6 +61,9 @@ report:  ## Generate all tables + report artifacts from results
 render:  ## Fill thesis placeholders with computed results
 	$(PYTHON) scripts/render_report.py --config $(PRIMARY)
 
+verify-numbers:  ## Check thesis_final.md headline numbers match results/metrics/*.json
+	$(PYTHON) scripts/verify_thesis_numbers.py
+
 reproduce: validate-data train train-baselines evaluate benchmark quantize explain memory report render  ## Full pipeline on the real dataset
 
 clean:  ## Remove generated results (keeps directory structure)
