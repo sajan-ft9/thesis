@@ -187,6 +187,7 @@ never hand-typed.
 | Document | What it is |
 |---|---|
 | [`reports/thesis_final.md`](reports/thesis_final.md) | **The thesis** — full write-up with real, verified results |
+| [`reports/THESIS_HANDBOOK.md`](reports/THESIS_HANDBOOK.md) | **Defense master reference** — glossary of every term, full system/code flow, methodology, results, and a defense Q&A |
 | [`reports/REPRODUCE.md`](reports/REPRODUCE.md) | Step-by-step reproduction guide |
 | [`reports/related_work_annotated.md`](reports/related_work_annotated.md) | Annotated bibliography (10 closely-related papers) |
 | [`reports/RESEARCH_PLAN.md`](reports/RESEARCH_PLAN.md) | Roadmap to a conference paper / PhD directions |
