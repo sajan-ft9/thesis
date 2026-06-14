@@ -1,159 +1,223 @@
-# Memory-Efficient Explainable Pneumonia Detection
-### Quantized EfficientNet-B0 for Resource-Constrained Healthcare Environments
+# Memory-Efficient, Explainable, Quantized Pneumonia Detection from Chest X-Rays
+### A reproducible, deployment-honest medical-AI pipeline (EfficientNet-B0 · Grad-CAM++ · INT8 · external validation)
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-pytest-green.svg)](tests/)
-[![Reproducible](https://img.shields.io/badge/research-reproducible-success.svg)](#reproducibility)
+[![Tests: 40 passing](https://img.shields.io/badge/tests-40%20passing-brightgreen.svg)](tests/)
+[![Reproducible](https://img.shields.io/badge/research-reproducible-success.svg)](#reproducibility--how-to-verify-every-claim)
+[![No fabricated results](https://img.shields.io/badge/results-measured%2C%20not%20fabricated-critical.svg)](#scientific-integrity)
 
-A reproducible research framework for **explainable, resource-efficient pneumonia
-detection** from chest X-rays. It pairs a lightweight **EfficientNet-B0** backbone
-(benchmarked against **ResNet-18** and **MobileNetV3-Small**) with integrated
-**Grad-CAM++** explanations, **INT8 quantization** (dynamic + static PTQ), rigorous
-**bootstrap confidence intervals**, and **correct efficiency benchmarking** — built
-for deployment in low-resource clinical settings.
+A research codebase that detects pneumonia in chest X-rays with a **lightweight, quantized,
+explainable** model — and, more importantly, **evaluates it the way it would actually be
+deployed**: with data-integrity checks, confidence intervals, honest memory benchmarking,
+and **zero-shot external validation on a second dataset**.
 
-> **Research contribution** is not pneumonia classification alone, but the
-> *integration*: explainable medical image classification + resource-efficient,
-> quantized, deployment-oriented models + a reproducible medical-AI workflow.
+> **The contribution is the *methodology*, not a new classifier.** Lightweight CNNs already
+> solve pneumonia classification; what is uncommon — and what this project provides — is an
+> *integrated, integrity-checked, deployment- and memory-honest, reproducible* evaluation:
+> (1) data-leakage detection, (2) reproducibility, (3) explainability, (4) a real
+> dynamic-vs-static quantization study, and (5) correct efficiency/memory measurement.
 
-> 🔬 **Scientific integrity.** This project **never fabricates results**. There are
-> no simulated radiologist surveys, no invented metrics, and no `tracemalloc`-based
-> "0.1 MB RAM" claims. Numbers appear in the thesis only after you run the pipeline;
-> they are injected from `results/` by `scripts/render_report.py`.
+This repository accompanies an MSc thesis ([`reports/thesis_final.md`](reports/thesis_final.md))
+and is structured for replication and review. **Every number below is measured by the code
+and machine-checked against the source data** (see [Verify every claim](#reproducibility--how-to-verify-every-claim)).
 
 ---
 
-## Table of Contents
-- [Highlights](#highlights)
-- [Repository structure](#repository-structure)
-- [Installation](#installation)
-- [Quick start (synthetic smoke test)](#quick-start-synthetic-smoke-test)
-- [Dataset](#dataset)
-- [Full reproduction](#full-reproduction)
-- [What gets produced](#what-gets-produced)
-- [Reproducibility](#reproducibility)
-- [Testing](#testing)
-- [Limitations](#limitations)
-- [Citation](#citation)
+## Headline results (measured, reproducible)
 
-## Highlights
-- **Three architectures, one pipeline** — fair, publishable baseline comparison.
-- **Integrated Grad-CAM++** for correct / false-positive / false-negative cases.
-- **Dynamic vs static INT8 PTQ** — a transparent compression study (static PTQ
-  quantizes convolutions, the deployment-relevant win).
-- **Honest benchmarking** — on-disk size, warmup-corrected latency (mean/std/p95),
-  throughput, and sampled peak process RSS.
-- **Statistical rigor** — bootstrap 95% CIs for accuracy and ROC-AUC; Youden-J
-  threshold; per-error analysis.
-- **Reproducible by construction** — YAML configs, global seeding, deterministic
-  data loading, per-run `metadata.json`, and auto-generated CSV/Markdown/LaTeX
-  tables and PNG/PDF figures.
+**Diagnostic performance — Kermany held-out test set (n = 624):**
+
+| Metric | EfficientNet-B0 | 95% CI |
+|---|---|---|
+| ROC-AUC | **0.9678** | 0.9504 – 0.9816 |
+| Sensitivity | 0.9667 | — |
+| Specificity | 0.8376 | — |
+| F1 | 0.9366 | — |
+
+**Fair architecture comparison (identical pipeline):** MobileNetV3-Small AUC 0.9743 (1.08 M params) · EfficientNet-B0 0.9678 (4.34 M, best precision/specificity balance) · ResNet-18 0.9594 (11.31 M).
+
+**Efficiency & memory (the "memory-efficient" claim, measured — not `tracemalloc`):**
+
+| | FP32 | INT8 static (PTQ) | Gain |
+|---|---|---|---|
+| Model size | 17.66 MB | **5.13 MB** | −71% |
+| CPU latency / image | ~120 ms | **~15 ms** | ~8× |
+| Peak inference RAM | 979.5 MB | **164.4 MB** | ~6× |
+| Streaming vs naïve data load | 335.8 MB | 3,140.9 MB | **9.4× less RAM** |
+
+**External validation (zero-shot, no tuning) — RSNA Pneumonia, n = 12,024 (adult; different source):**
+
+| Metric | RSNA (external) | Kermany (internal) |
+|---|---|---|
+| ROC-AUC | **0.8892** (95% CI 0.8825 – 0.8954) | 0.9678 |
+| Sensitivity | 0.9553 | 0.9667 |
+
+A modest, *expected* drop under pediatric → adult domain shift — reported honestly, with no
+attempt to optimise the external score.
+
+**Data integrity:** an automatic check found and removed **26 duplicate images** that caused
+train↔validation leakage; the official test set was kept canonical and verified disjoint.
+
+---
+
+## Scientific integrity
+
+This project **does not fabricate results**. There are **no** simulated radiologist surveys,
+**no** invented metrics, and **no** misleading `tracemalloc` memory figures. Every quantitative
+claim is produced by the code from raw data and is machine-verifiable:
+
+```bash
+make verify-numbers      # asserts 21/21 headline numbers in the thesis == results/metrics/*.json
+```
+
+---
+
+## Key contributions
+
+1. **Data-integrity** — automatic duplicate + train/val/test leakage detection and removal.
+2. **Reproducibility** — seeded, configuration-driven, tested pipeline; per-run manifests; one-command regeneration.
+3. **Explainability** — integrated Grad-CAM++ for correct / false-positive / false-negative cases (no simulated trust scores).
+4. **Quantization** — transparent dynamic vs. static INT8 study, incl. the practical finding that *per-channel* quantization is required to avoid EfficientNet-B0 collapse.
+5. **Deployment efficiency** — correct size / latency / throughput / peak-memory benchmarking + zero-shot external validation.
+
+---
 
 ## Repository structure
+
 ```
 .
 ├── configs/            # base + per-model YAML (efficientnet_b0, resnet18, mobilenetv3)
-├── data/               # raw/ processed/ splits/ (+ data/README.md; datasets not committed)
-├── src/                # all logic (importable, typed, tested) — no notebook-only code
+├── src/                # typed, tested package — all logic lives here (no notebook-only code)
 │   ├── config.py utils.py dataset.py transforms.py models.py metrics.py
 │   ├── train.py evaluate.py inference.py quantize.py benchmarking.py
-│   └── explainability.py visualization.py reporting.py
-├── scripts/            # make_synthetic_data.py, run_smoke_test.sh, render_report.py
-├── tests/              # pytest suite (unit + end-to-end integration)
-├── results/            # figures/ tables/ metrics/ gradcam/ confusion_matrices/ roc_curves/
-├── reports/            # thesis.md (results-driven), limitations.md, future_work.md, REPRODUCE.md
-├── paper_assets/       # IEEE paper skeleton + captions + result summary
-├── notebooks/          # thin demo notebook that calls into src/
-├── Makefile  pyproject.toml  requirements.txt  environment.yml
-└── LICENSE  CITATION.cff  CONTRIBUTING.md
+│   └── explainability.py visualization.py reporting.py memory_profile.py
+├── scripts/            # fetch_kermany_hf.py, fetch_rsna_hf.py, build_rsna_subset.py,
+│                       #   make_synthetic_data.py, run_smoke_test.sh, render_report.py,
+│                       #   verify_thesis_numbers.py
+├── tests/              # 40 unit + integration tests (CPU, offline, synthetic fixtures)
+├── results/            # figures, tables (CSV/MD/LaTeX), metrics (JSON), Grad-CAM overlays
+├── reports/            # thesis_final.md (the thesis), RESEARCH_PLAN.md, SUPERVISOR_BRIEF.md,
+│                       #   related_work_annotated.md, limitations.md, future_work.md, REPRODUCE.md
+├── paper_assets/       # IEEE conference-paper draft + captions
+├── notebooks/          # thin demo that only calls into src/
+└── Makefile  pyproject.toml  requirements.txt  environment.yml  CITATION.cff  LICENSE
 ```
 
+---
+
 ## Installation
+
 ```bash
-make setup            # creates .venv and installs pinned dependencies
+make setup                       # creates .venv and installs pinned dependencies
 # or manually:
 python3 -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
 ```
-Reference environment: Python 3.12, PyTorch 2.12, torchvision 0.27 (CPU verified on
-macOS arm64). For CUDA, install the matching `torch` build from pytorch.org.
 
-## Quick start (synthetic smoke test)
-Verify the entire pipeline end-to-end **without the dataset** — uses tiny synthetic
-images (random; *not* research data):
-```bash
-make smoke
-```
-This runs validate → train (3 models) → evaluate → benchmark → quantize → Grad-CAM++
-→ reporting and writes artifacts under `results/` and `models/`.
+Reference environment (verified): **Python 3.12, PyTorch 2.12, torchvision 0.27**, on
+Apple-silicon (Metal/MPS) — **no CUDA required**. For an NVIDIA GPU, install the matching
+`torch` build from [pytorch.org](https://pytorch.org) and keep the other pins.
 
-## Dataset
-Download the **Kermany Chest X-Ray Pneumonia** dataset into `data/raw/chest_xray/`
-(`train/` and `test/`, each with `NORMAL/` and `PNEUMONIA/`). Full instructions:
-[`data/README.md`](data/README.md). Then:
-```bash
-make validate-data    # class balance, duplicate detection, train/val/test leakage check
-```
+---
 
-## Full reproduction
+## Quick start — prove the pipeline works in ~2 minutes (no dataset needed)
+
 ```bash
-make reproduce        # validate -> train (x3) -> evaluate -> benchmark -> quantize -> explain -> report -> render
+make smoke                       # end-to-end run on tiny SYNTHETIC data (not research data)
 ```
-Or stage by stage:
+This exercises validate → train (3 models) → evaluate → benchmark → quantize → Grad-CAM++ →
+report, confirming the whole pipeline executes.
+
+---
+
+## Reproducing the real results
+
+### 1. Get the data
 ```bash
-make train            # python -m src.train --config configs/efficientnet_b0.yaml
-make train-baselines  # resnet18 + mobilenetv3
-make evaluate         # test metrics + CIs + confusion/ROC/PR figures
-make benchmark        # size/latency/throughput/RSS
-make quantize         # dynamic + static INT8 + ONNX export
-make explain          # Grad-CAM++ overlays
-make report           # Tables 1-6 (CSV/MD/LaTeX) + limitations/future-work/paper assets
-make render           # fill reports/thesis.md placeholders -> reports/thesis_rendered.md
+python scripts/fetch_kermany_hf.py          # Kermany pediatric CXR (credential-free HF mirror, ~1.2 GB)
+make validate-data                          # class balance + duplicate + leakage report
 ```
-Every stage is also a plain CLI, e.g.:
+See [`data/README.md`](data/README.md) for details and alternatives.
+
+### 2. Full pipeline (train → evaluate → quantize → benchmark → explain → memory → report)
 ```bash
-python -m src.train --config configs/resnet18.yaml --override train.epochs=15 data.batch_size=16
-python -m src.inference --checkpoint models/efficientnet_b0_best.pth --image path/to/cxr.jpeg
+make reproduce
+```
+Or stage by stage: `make train train-baselines evaluate benchmark quantize explain memory report render`.
+Every stage is also a CLI, e.g. `python -m src.train --config configs/efficientnet_b0.yaml`.
+
+### 3. External validation (optional, ~3.5 GB download)
+```bash
+make external-rsna                          # fetch RSNA -> build balanced subset -> zero-shot inference
 ```
 
-## What gets produced
-| Output | Location |
+---
+
+## Testing & verification
+
+```bash
+make test                # 40 unit + integration tests (offline, CPU, synthetic fixtures)
+make verify-numbers      # every headline number in the thesis == results/metrics/*.json (21/21)
+make lint                # ruff (style + import order)
+```
+
+### Reproducibility & how to verify every claim
+Each claim in the thesis maps to a command — a reviewer can check them independently:
+
+| Claim | Verify with |
 |---|---|
-| Trained checkpoints, FP32/INT8 models, ONNX | `models/` |
-| Metrics + CIs, history, metadata, error cases (JSON/CSV) | `results/metrics/` |
-| Tables 1–6 + literature template (CSV + Markdown + LaTeX) | `results/tables/` |
-| Training curves, ROC, PR, confusion matrix, quantization charts (PNG + PDF) | `results/figures/`, `results/roc_curves/`, `results/confusion_matrices/` |
-| Grad-CAM++ overlays (correct / FP / FN) | `results/gradcam/` |
-| Results-driven thesis + limitations + future work | `reports/` |
-| IEEE paper skeleton + captions + summary | `paper_assets/` |
+| Test AUC 0.9678 (95% CI), sensitivity/specificity | `make train evaluate` → `results/metrics/efficientnet_b0_test_metrics.json` |
+| 3-model comparison (identical pipeline) | `make train train-baselines evaluate` → `results/tables/table3_model_comparison.md` |
+| INT8: −71% size, ~8× faster, ~6× less RAM | `make quantize benchmark memory` → `results/metrics/*_quantization.json`, `memory_profile.json` |
+| Streaming uses 9.4× less RAM than naïve load | `make memory` → `results/metrics/memory_profile.json` |
+| 26 duplicates / train-val leakage removed | `make validate-data` → `results/metrics/dataset_validation.json` |
+| RSNA external AUC 0.8892 (zero-shot) | `make external-rsna` → `results/metrics/rsna_external_metrics.json` |
+| Thesis numbers match the data exactly | `make verify-numbers` (21/21 PASS) |
 
-## Reproducibility
-- `seed_everything()` seeds Python/NumPy/PyTorch and makes DataLoaders deterministic
-  (seeded generator + worker init).
-- Every training run writes a `metadata.json` manifest: timestamp, git SHA, seed,
-  library versions, full config, and dataset statistics.
-- All experiment behaviour is configured via `configs/` (no hidden constants).
-- Thesis/paper numbers are injected from result files — never hand-typed.
+Determinism: a single `seed_everything()` seeds Python/NumPy/PyTorch and makes DataLoaders
+deterministic; every training run writes a `metadata.json` manifest (timestamp, git SHA, seed,
+library versions, full config, dataset stats). Thesis numbers are injected from results files —
+never hand-typed.
 
-## Testing
-```bash
-make test             # 40 unit + integration tests (CPU, offline, synthetic fixtures)
-```
-Covers config loading, seeding/determinism, dataset integrity (dedup + leakage),
-transforms, all three models, metrics + bootstrap CIs, quantization (dynamic +
-static PTQ), and a full train→evaluate→benchmark integration run.
+---
 
-## Limitations
-Stated explicitly in [`reports/limitations.md`](reports/limitations.md): single
-dataset, no external validation, no real-world/clinician validation (and none
-simulated), no edge-hardware validation, and potential dataset bias. This is a
-research artifact and **not a medical device**.
+## Documentation
+
+| Document | What it is |
+|---|---|
+| [`reports/thesis_final.md`](reports/thesis_final.md) | **The thesis** — full write-up with real, verified results |
+| [`reports/REPRODUCE.md`](reports/REPRODUCE.md) | Step-by-step reproduction guide |
+| [`reports/related_work_annotated.md`](reports/related_work_annotated.md) | Annotated bibliography (10 closely-related papers) |
+| [`reports/RESEARCH_PLAN.md`](reports/RESEARCH_PLAN.md) | Roadmap to a conference paper / PhD directions |
+| [`paper_assets/paper_ieee.tex`](paper_assets/paper_ieee.tex) | IEEE conference-paper draft (real numbers) |
+
+---
+
+## Limitations (stated plainly)
+
+Single-institution **pediatric** training data; external validation is a **single, exploratory**
+zero-shot probe (RSNA) — not multi-dataset, patient-level, or a clinical reader study; efficiency
+is measured on CPU/GPU as an **edge proxy** (no physical Raspberry Pi / Jetson run);
+explainability is **qualitative** (Grad-CAM++ not validated against expert annotations). See
+[`reports/limitations.md`](reports/limitations.md). **This is a research artifact, not a medical
+device, and is not for clinical use.**
+
+---
 
 ## Citation
-If you use this work, please cite it (see [`CITATION.cff`](CITATION.cff)) and the
-Kermany dataset [22 in `reports/thesis.md`].
+
+If you use this work, please cite it (see [`CITATION.cff`](CITATION.cff)) and the Kermany dataset:
+
+> Kermany DS, et al. *Identifying Medical Diagnoses and Treatable Diseases by Image-Based Deep
+> Learning.* Cell. 2018;172(5):1122-1131.e9.
+
+## Author
+
+**Sajan** — MSc Information Technology · 📧 sajankhad2@gmail.com
+*(institution / links to be added)*
 
 ## License
-MIT (code only) — see [`LICENSE`](LICENSE). The Kermany dataset has its own CC BY 4.0
-terms.
+
+Code: **MIT** (see [`LICENSE`](LICENSE)). The Kermany and RSNA datasets retain their own licenses
+(CC BY 4.0 and the RSNA challenge terms, respectively) and are not redistributed here.
