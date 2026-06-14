@@ -183,3 +183,61 @@ label noise at comparable effort.
 **Bottom line:** Worth doing *only* as a small, isolated, honestly-framed, inference-only
 probe that stays within a day. If data access isn't quick and clean, the thesis is already
 defensible without it — leave it as the clearly-stated future work it currently is.
+
+---
+
+## 8. Addendum — Dataset-Access Feasibility Check (decisive)
+
+This addendum answers the four access questions and applies the strict rule: *proceed only
+if total effort is realistically < 1 working day with no retraining, relabeling, or
+substantial code changes.*
+
+### 8.1 Fastest reproducible source
+| Source | Credential-free? | Size | Native res | Per-label/per-file fetch? | Notes |
+|---|---|---|---|---|---|
+| HF `alkzar90/NIH-Chest-X-ray-dataset` | **Yes** | **45.1 GB** | 1024² | **No** (custom loading script; viewer disabled; no label-selective download) | Only credential-free *full* source. |
+| Kaggle `nih-chest-xrays/data` | No (API token) | ~42 GB (12 zips) | 1024² | Per-file only with token + index→archive mapping | Needs Kaggle account. |
+| Kaggle `…/nih-chest-x-ray-14-224x224-resized` | No (API token) | **~few GB** | **224²** (our exact input) | Filter via `Data_Entry_2017.csv` after download | *Ideal* size/res — but credential-gated. |
+| `MichaelNoya` webdataset subset | Yes | ~1 GB (2.4%) | varies | sample only | ⚠️ ~2.4% × 1,431 ≈ **~34 pneumonia** — too few for a stable AUC. |
+
+`Data_Entry_2017.csv` (labels + filenames, ~8 MB) is freely available everywhere.
+
+### 8.2 Actual download size for the balanced subset
+The balanced subset itself is small: ~1,431 pneumonia + ~1,431 "No Finding" ≈ **2,862
+images** ≈ **~1.1 GB at 1024²** or **~70 MB at 224²**. **But the *acquisition* size is the
+problem:** because pneumonia is ~1.3% of images and **no credential-free source supports
+label-selective or per-file download**, obtaining those pneumonia images credential-free
+requires pulling **≈ the full 45 GB** (or streaming through ~most of it). *The subset is
+cheap; getting it credential-free is not.*
+
+### 8.3 Can a balanced subset be made WITHOUT the full dataset?
+- **Credential-free: effectively NO.** The only open source (HF, 45 GB) has no
+  label-selective access; streaming to collect even a *reduced* 150–200 pneumonia images
+  still pulls ~5–8 GB and depends on a custom loading script (friction/risk). A truly
+  balanced full-pneumonia subset needs ~the whole 45 GB.
+- **With a Kaggle token: YES, cheaply.** The **224²-resized** Kaggle version is only a few
+  GB, already at the model's input resolution, and filterable via the CSV — a genuine
+  partial/low-cost path.
+
+### 8.4 End-to-end time estimate
+| Phase | Credential-free (HF 45 GB) | With Kaggle token (224² resized) |
+|---|---|---|
+| Data acquisition | **Hours → >1 day** (45 GB + loader-script setup) | ~0.5–1 h (few GB) |
+| Subset creation (CSV filter, balance) | 1–2 h | 1–2 h |
+| Code (`evaluate_directory`, ~40 lines) | 2–4 h | 2–4 h |
+| Inference + metrics + figures | <1 h | <1 h |
+| Thesis write-up (isolated subsection) | 2–3 h | 2–3 h |
+| **Total** | **≈ 1.5–2 working days** (acquisition-bound) | **≈ 1 working day or just under** |
+
+### 8.5 Decision (applying the rule)
+- **Under current (credential-free) constraints → DEFER (No-Go).** The credential-free
+  route is acquisition-bound at ~45 GB and realistically exceeds one working day; it fails
+  the rule. NIH validation stays as the already-written future-work item (§6.2).
+- **Conditional flip to GO** *only if* a **Kaggle API token** is available: then use the
+  **224²-resized NIH** (or the expert-labelled **RSNA Pneumonia** set), which makes the
+  whole experiment a genuine sub-one-day, inference-only addition with just the ~40-line
+  `evaluate_directory` change.
+
+**Recommendation: DEFER NIH external validation to future work now; revisit immediately
+if/when a Kaggle token is provided (then prefer the 224²-resized NIH or RSNA).** This keeps
+the thesis on track and avoids an acquisition-bound detour.
