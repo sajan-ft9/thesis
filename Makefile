@@ -61,6 +61,9 @@ report:  ## Generate all tables + report artifacts from results
 render:  ## Fill thesis placeholders with computed results
 	$(PYTHON) scripts/render_report.py --config $(PRIMARY)
 
+stats:  ## Deeper statistics: paired-bootstrap AUC comparison + calibration (ECE/Brier), inference-only
+	$(PYTHON) -m src.statistical_analysis
+
 verify-numbers:  ## Check thesis_final.md headline numbers match results/metrics/*.json
 	$(PYTHON) scripts/verify_thesis_numbers.py
 
@@ -69,7 +72,7 @@ external-rsna:  ## Exploratory zero-shot external validation on RSNA (download +
 	$(PYTHON) scripts/build_rsna_subset.py --seed 42
 	$(PYTHON) -m src.evaluate --checkpoint $(CKPT) --external-dir data/processed/rsna_external --tag rsna_external --device cpu
 
-reproduce: validate-data train train-baselines evaluate benchmark quantize explain memory report render  ## Full pipeline on the real dataset
+reproduce: validate-data train train-baselines evaluate benchmark quantize explain memory stats report render  ## Full pipeline on the real dataset
 
 clean:  ## Remove generated results (keeps directory structure)
 	find results -type f ! -name '.gitkeep' -delete
