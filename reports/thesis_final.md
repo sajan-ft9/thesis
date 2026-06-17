@@ -138,7 +138,10 @@ outcomes:
 
 1. **Diagnostic performance.** Train and rigorously evaluate a lightweight CXR
    pneumonia classifier, reporting metrics with confidence intervals rather than
-   point estimates alone (reference target: ROC-AUC ≥ 0.95).
+   point estimates alone. The **primary, threshold-independent acceptance target is
+   ROC-AUC ≥ 0.95**; sensitivity and specificity figures are reported as *secondary
+   operating-point characteristics* whose values depend on the chosen deployment
+   threshold (§4.1.1), not as fixed pass/fail criteria.
 2. **Computational efficiency.** Quantify model size, **peak memory (RAM)**, inference
    latency, and throughput, and reduce them via post-training quantization suitable for
    edge deployment (reference targets: model size < 50 MB; CPU latency < 100 ms/image;
@@ -200,7 +203,8 @@ independently useful contributions:
 1. **Data-integrity contribution.** An automatic check that detects byte-identical
    duplicate images and quantifies train/validation/test leakage by path and content
    hash; on this dataset it removed 26 duplicates causing train↔validation leakage and
-   verified content-disjoint splits (§3.1) — rigour most CXR studies omit.
+   confirmed no cross-split duplicate leakage after training-set deduplication (§3.1) —
+   rigour most CXR studies omit.
 2. **Reproducibility contribution.** A fully scripted, seed-controlled,
    configuration-driven pipeline with unit/integration tests and per-run manifests, so
    every reported number and figure is regenerable from raw data with one command
@@ -316,7 +320,8 @@ contains 16 within-train duplicate groups, and 9 image contents appeared in **bo
 the training and validation partitions (content leakage that would optimistically
 bias model selection). The pipeline therefore **deduplicates the training pool**
 (removing 26 byte-identical duplicate files) before splitting; after deduplication
-the train/validation/test partitions are content-disjoint (verified). The official
+no cross-split duplicate leakage remains after training-set deduplication (verified by
+content hash). The official
 test set is retained at its canonical 624 images; its 6 intrinsic within-test
 duplicate groups are disclosed but not removed, so results remain comparable to the
 standard benchmark. After deduplication the working splits are **train = 4,152**
@@ -422,6 +427,25 @@ grad-cam 1.5.5, onnxruntime 1.26.0.
 **Reproducibility.** Complete code, configurations, tests, and environment pins are
 provided; the full study is reproduced with `make reproduce`.
 
+### 3.9 Model-Selection Criterion (defined a priori)
+
+To avoid post-hoc bias, the rule for choosing the deployed backbone is fixed **before**
+viewing test results, and is explicitly **multi-objective** (raw AUC is *not* the sole
+objective). Models are selected by a lexicographic rule:
+
+> **(i) Discrimination floor** — ROC-AUC must be statistically indistinguishable from the
+> best model (no significant DeLong difference). **(ii) Operating-point quality** — among
+> those, prefer the screening-appropriate profile: higher specificity at comparable
+> sensitivity (fewer false positives) and better probability **calibration**. **(iii)
+> Resource budget** — subject to model size < 50 MB and peak inference RAM < 2 GB.
+
+Equivalently, this is a constrained score
+`S = AUC − λ·(false-positive rate) − γ·ECE` evaluated under the resource budget. The final
+choice is **insensitive to the exact weights** `λ, γ`, because (as §4.2.1 shows) the AUC
+differences between the candidate models are *not* statistically significant — so selection
+is decided entirely by the operating-point and calibration terms. This criterion is applied,
+unchanged, in §4.2.
+
 ---
 
 ## Chapter 4: Results and Analysis
@@ -434,7 +458,7 @@ provided; the full study is reproduced with `make reproduce`.
 |---|---|---|---|---|
 | ROC-AUC | **0.9678** | [0.9504, 0.9816] | ≥ 0.95 | ✅ Met |
 | Sensitivity (recall) | 0.9667 | [0.9484, 0.9826] | ≥ 0.93 | ✅ Met |
-| Specificity | 0.8376 | [0.7892, 0.8826] | ≥ 0.90 (at thr = 0.5) | ⚠️ See §4.1.1 |
+| Specificity | 0.8376 | [0.7892, 0.8826] | ≥ 0.90 (secondary, thr-dependent) | △ §4.1.1 |
 | Precision (PPV) | 0.9084 | [0.8816, 0.9346] | — | Good |
 | F1-score | 0.9366 | [0.9194, 0.9535] | — | Good |
 | Accuracy | 0.9183 | [0.8958, 0.9391] | — | Good |
@@ -489,8 +513,11 @@ corrected runs); size is the serialised FP32 state dict.*
    gives the **best precision/specificity balance and highest F1**, making it the most
    clinically usable operating point and the proposed backbone.
 
-**Why EfficientNet-B0 and not MobileNetV3-Small?** Although MobileNetV3-Small edges out
-EfficientNet-B0 on AUC (0.974 vs. 0.968) at a smaller size, it roughly **doubles the
+**Why EfficientNet-B0 and not MobileNetV3-Small?** Applying the *a-priori* multi-objective
+selection criterion of §3.9: because the AUC difference is not statistically significant
+(§4.2.1), criterion (i) treats the two as tied on discrimination, so the choice falls to
+criterion (ii) — operating-point quality and calibration. Although MobileNetV3-Small edges
+out EfficientNet-B0 on AUC (0.974 vs. 0.968) at a smaller size, it roughly **doubles the
 false-positive rate** (77 vs. 38; specificity 0.67 vs. 0.84). For a screening tool that
 clinicians must trust, an excess of false alarms — not a 0.6-point AUC difference — is
 the decisive factor: EfficientNet-B0 is therefore selected as the default, and
@@ -503,9 +530,11 @@ tuning; both operating points are reported for transparency.)
 
 Model differences were assessed with three complementary tools: a **paired bootstrap** of
 ΔAUC (2,000 resamples, shared indices), **DeLong's test** for correlated AUCs, and
-**McNemar's test** on paired errors. Probability quality was quantified with **ECE** (10
-bins), **Brier score**, and the **calibration slope & intercept** (logistic recalibration;
-slope ≈ 1 and intercept ≈ 0 ⇒ well calibrated).
+**McNemar's test** on paired errors; all three are **paired on identical test-set
+predictions** (the same images in the same order), as these tests require. Probability
+quality was quantified with **ECE** (10 bins), **Brier score**, and the **calibration
+slope & intercept** (logistic recalibration), interpreted **jointly** — slope alone is
+insufficient (a slope near 1 with a large intercept still signals bias).
 
 | Model | ROC-AUC (95% CI) | ECE ↓ | Brier ↓ | Cal. slope | Cal. intercept |
 |---|---|---|---|---|---|
@@ -514,9 +543,11 @@ slope ≈ 1 and intercept ≈ 0 ⇒ well calibrated).
 | MobileNetV3-Small | 0.9743 [0.9632, 0.9843] | 0.0559 | 0.0945 | 1.415 | −2.949 |
 
 *Table 4.3: Discrimination (95% bootstrap CIs) and calibration. EfficientNet-B0 is the
-best-calibrated model — lowest ECE/Brier and a calibration slope nearest the ideal of 1.0
-(0.987 vs 1.25 / 1.42), i.e. its probabilities are neither over- nor under-confident.
-Reliability diagrams for all three models are in `results/figures/calibration_reliability.png`.*
+best-calibrated model — lowest ECE/Brier, a calibration slope nearest the ideal of 1.0
+(0.987 vs 1.25 / 1.42) **and** the smallest-magnitude intercept (−0.80 vs −2.48 / −2.95);
+judged jointly, its probabilities are the least biased and neither over- nor
+under-confident. Reliability diagrams for all three models are in
+`results/figures/calibration_reliability.png`.*
 
 | Comparison (A − B) | Bootstrap ΔAUC [95% CI] | DeLong p | McNemar p (errors) |
 |---|---|---|---|
@@ -596,6 +627,17 @@ fixed 0.5 threshold; "AUC drop" is threshold-independent.*
 The FP32 model was also exported to ONNX and verified with ONNX Runtime, providing a
 cross-platform deployment artefact.
 
+**Quantization caveats.** These static-PTQ results carry standard, important caveats.
+(i) **Calibration-set dependence** — the activation ranges are estimated from a finite
+calibration set (here the clean validation split); accuracy can vary with its size and
+representativeness. (ii) **Operator handling** — BatchNorm folding and the per-channel vs
+per-tensor observer choice materially change the outcome (the per-tensor collapse to
+AUC ≈ 0.40 is direct evidence). (iii) **Hardware/backend variability** — INT8 kernels are
+backend-specific (`qnnpack` on the Apple/ARM host); latency and even accuracy can differ on
+other backends (e.g. fbgemm/x86) and devices, so the reported speed-ups are indicative of,
+not identical to, on-device behaviour. Quantization-aware training would likely narrow the
+static-PTQ accuracy gap and is identified as future work (§6.2).
+
 ### 4.4 Computational Efficiency
 
 **Speed and size (EfficientNet-B0, CPU):**
@@ -671,13 +713,14 @@ rather than borderline, indicating genuinely difficult or atypical radiographs r
 than threshold ambiguity. Coupling probability outputs with Grad-CAM++ overlays lets a
 clinician triage and review such cases, supporting a safe human-in-the-loop workflow.
 
-**Statistical separation of error types.** The false-positive and false-negative
-predicted-probability distributions are **completely non-overlapping** (overlapping
-coefficient = 0.00; FP confidences sit at 0.85 ± 0.15, FN at 0.24 ± 0.13), and the
-predicted-probability separation between the true Normal and true Pneumonia classes is
-very large (**Cohen's d = 3.45**). Together these show the two error modes are distinct,
-confident, and well-separated rather than a smear of borderline cases — consistent with the
-high MCC (0.825) and the threshold robustness of §4.2.2. The distribution is plotted in
+**Statistical separation of error types.** For the false-positive and false-negative
+predicted-probability distributions, **no empirical overlap was observed in this test set**
+(overlapping coefficient = 0.00; FP confidences at 0.85 ± 0.15, FN at 0.24 ± 0.13). This is
+an observation on a *small error sample* (only 51 errors) and is not a claim of guaranteed
+separation in general. The predicted-probability separation between the true Normal and true
+Pneumonia classes is large (**Cohen's d = 3.45**). Together these suggest the two error modes
+are distinct and confident rather than a smear of borderline cases — consistent with the high
+MCC (0.825) and the threshold robustness of §4.2.2. The distribution is plotted in
 `results/figures/error_distribution.png`.
 
 **Per-class breakdown (EfficientNet-B0, test set):**
@@ -706,7 +749,10 @@ subset of the **RSNA Pneumonia Detection Challenge** dataset — a different pop
 expert-adjudicated labels. A deliberately simple, exploratory binary mapping is used:
 RSNA "Normal" → Normal; RSNA "Lung Opacity" → Pneumonia; the ambiguous "No Lung Opacity /
 Not Normal" class is excluded. The subset is balanced at 6,012 images per class (12,024
-total; seed 42) and evaluated at the same fixed 0.5 threshold used throughout.
+total; seed 42) and evaluated at the same fixed 0.5 threshold used throughout. **No
+probability recalibration** (Platt scaling, isotonic regression, or temperature scaling) and
+**no threshold re-optimisation** were applied on RSNA — the model is evaluated exactly as
+trained, so the reported figures reflect raw transfer.
 
 **Results (zero-shot, n = 12,024):**
 
@@ -724,15 +770,17 @@ figures use the Kermany-trained checkpoint with no tuning. See
 `results/confusion_matrices/rsna_external_confusion_matrix.png`.*
 
 **Interpretation.** Under a substantial domain shift (pediatric → adult; different
-institutions and scanners), the model retains **reasonable discriminative ability**
-(AUC 0.889) and **high sensitivity** (0.955), while specificity falls to 0.606 — i.e. it
-still detects pneumonia but produces more false positives on adult normal radiographs. The
-~0.08 AUC reduction relative to the internal test set is the **expected** consequence of
-domain shift and is reported honestly; no attempt was made to optimise the external score.
-That the underlying separation remains strong is corroborated by the operating-point
-analysis: a threshold of 0.927 (computed on RSNA **for context only and not applied**)
-would rebalance to sensitivity 0.879 / specificity 0.826 — indicating the lower
-default-threshold specificity is partly a calibration effect rather than lost separability.
+institutions and scanners), performance drops as expected, and crucially **the two error
+axes do not transfer equally: sensitivity transfers far better than specificity**
+(sensitivity 0.955 vs internal 0.967, but specificity falls to 0.606 from 0.838). The model
+still detects most pneumonia but produces substantially more false positives on adult normal
+radiographs — a real specificity degradation, not a benign result. The ~0.08 AUC reduction
+(0.968 → 0.889) is the expected consequence of domain shift and is reported as-is; no attempt
+was made to optimise the external score. Part of the specificity loss is a **calibration**
+effect rather than lost ranking ability: calibration degrades sharply off-distribution
+(ECE 0.035 → 0.119, slope 0.99 → 0.79), and a threshold of 0.927 computed on RSNA **for
+context only and not applied** would rebalance to sensitivity 0.879 / specificity 0.826 —
+i.e. deployment on a new population would require re-calibration and threshold re-selection.
 This exploratory result provides initial, supplementary evidence that the model generalizes
 to an independent dataset; rigorous external and clinical validation remain future work
 (§6.2).
