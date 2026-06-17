@@ -37,7 +37,7 @@ Confirm `"clean": true` for leakage before proceeding.
 make reproduce
 ```
 This runs, in order: `validate-data → train → train-baselines → evaluate →
-benchmark → quantize → explain → report → render`.
+benchmark → quantize → explain → memory → stats → tradeoff → report → render`.
 
 ## 3. Stage-by-stage (equivalent)
 
@@ -99,6 +99,7 @@ Every figure is regenerated automatically by the pipeline (no manual plotting):
 | `results/figures/quantization_comparison.*` | `make quantize` |
 | `results/figures/memory_footprint.*` | `make memory` |
 | `results/figures/calibration_reliability.*`, `threshold_robustness.*`, `error_distribution.*` | `make stats` |
+| `results/figures/accuracy_efficiency_tradeoff.*` | `make tradeoff` |
 | `results/figures/<model>_gradcam_grid.*`, `results/gradcam/*` | `make explain` |
 
 All are produced end-to-end by `make reproduce`; none are hand-edited.
