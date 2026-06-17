@@ -1,10 +1,95 @@
 {
+  "dataset_baseline": {
+    "majority_class": "Pneumonia",
+    "baseline_accuracy": 0.625,
+    "model_accuracy": 0.9183,
+    "improvement_pp": 29.3
+  },
+  "primary_full_cis": {
+    "accuracy": {
+      "point": 0.9183,
+      "low": 0.8958,
+      "high": 0.9391
+    },
+    "precision": {
+      "point": 0.9084,
+      "low": 0.8816,
+      "high": 0.9346
+    },
+    "sensitivity": {
+      "point": 0.9667,
+      "low": 0.9484,
+      "high": 0.9826
+    },
+    "specificity": {
+      "point": 0.8376,
+      "low": 0.7892,
+      "high": 0.8826
+    },
+    "f1": {
+      "point": 0.9366,
+      "low": 0.9194,
+      "high": 0.9535
+    },
+    "mcc": {
+      "point": 0.825,
+      "low": 0.7787,
+      "high": 0.8698
+    },
+    "balanced_accuracy": {
+      "point": 0.9021,
+      "low": 0.877,
+      "high": 0.928
+    },
+    "cohen_kappa": {
+      "point": 0.8218,
+      "low": 0.7751,
+      "high": 0.8679
+    },
+    "auc": {
+      "point": 0.9678,
+      "low": 0.9504,
+      "high": 0.9816
+    }
+  },
   "per_model_kermany": {
     "efficientnet_b0": {
       "auc": 0.9678,
       "accuracy": 0.9183,
+      "mcc": 0.825,
+      "cohen_kappa": 0.8218,
+      "balanced_accuracy": 0.9021,
       "ece": 0.0354,
       "brier": 0.0633,
+      "slope": 0.9869,
+      "intercept": -0.8041,
+      "class_separation_cohens_d": 3.4511,
+      "reliability": {
+        "mean_predicted": [
+          0.0323,
+          0.1487,
+          0.2562,
+          0.3339,
+          0.4512,
+          0.543,
+          0.6629,
+          0.7487,
+          0.8629,
+          0.9739
+        ],
+        "fraction_positive": [
+          0.0194,
+          0.0645,
+          0.4444,
+          0.2222,
+          0.4,
+          0.0,
+          0.75,
+          0.3,
+          0.6,
+          0.9412
+        ]
+      },
       "per_class": {
         "Normal": {
           "precision": 0.9378,
@@ -23,8 +108,40 @@
     "resnet18": {
       "auc": 0.9594,
       "accuracy": 0.8798,
+      "mcc": 0.7515,
+      "cohen_kappa": 0.7275,
+      "balanced_accuracy": 0.8423,
       "ece": 0.0529,
       "brier": 0.0944,
+      "slope": 1.2494,
+      "intercept": -2.4806,
+      "class_separation_cohens_d": 2.8025,
+      "reliability": {
+        "mean_predicted": [
+          0.0496,
+          0.1387,
+          0.2507,
+          0.3419,
+          0.4397,
+          0.5456,
+          0.6459,
+          0.7517,
+          0.8405,
+          0.9802
+        ],
+        "fraction_positive": [
+          0.0094,
+          0.0,
+          0.0556,
+          0.0909,
+          0.0,
+          0.1,
+          0.1429,
+          0.3,
+          0.4286,
+          0.9124
+        ]
+      },
       "per_class": {
         "Normal": {
           "precision": 0.9818,
@@ -43,8 +160,40 @@
     "mobilenetv3_small": {
       "auc": 0.9743,
       "accuracy": 0.875,
+      "mcc": 0.7441,
+      "cohen_kappa": 0.7148,
+      "balanced_accuracy": 0.8342,
       "ece": 0.0559,
       "brier": 0.0945,
+      "slope": 1.4146,
+      "intercept": -2.949,
+      "class_separation_cohens_d": 2.8028,
+      "reliability": {
+        "mean_predicted": [
+          0.0439,
+          0.1393,
+          0.2615,
+          0.3259,
+          0.4411,
+          0.5373,
+          0.6455,
+          0.7504,
+          0.8652,
+          0.9787
+        ],
+        "fraction_positive": [
+          0.0092,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.2353,
+          0.1,
+          0.1667,
+          0.375,
+          0.9148
+        ]
+      },
       "per_class": {
         "Normal": {
           "precision": 0.9937,
@@ -61,40 +210,149 @@
       }
     }
   },
-  "pairwise_auc_kermany": [
+  "pairwise_kermany": [
     {
-      "mean_delta_auc": 0.008227393586640723,
-      "ci_low": -0.005038547799560517,
-      "ci_high": 0.021630959695813294,
-      "prob_a_gt_b": 0.886,
-      "n_resamples": 2000,
       "model_a": "efficientnet_b0",
       "model_b": "resnet18",
-      "interpretation": "\u0394AUC(A\u2212B)=+0.0082 [-0.0050,+0.0216] \u2014 not significant (CI spans 0)"
+      "bootstrap": {
+        "mean_delta_auc": 0.0082,
+        "ci_low": -0.005,
+        "ci_high": 0.0216,
+        "prob_a_gt_b": 0.886
+      },
+      "delong": {
+        "delta_auc": 0.0083,
+        "z": 1.2013,
+        "p_value": 0.2296
+      },
+      "mcnemar": {
+        "n01_A_wrong_B_right": 15,
+        "n10_A_right_B_wrong": 39,
+        "chi2_cc": 9.7963,
+        "p_value": 0.0015
+      }
     },
     {
-      "mean_delta_auc": -0.006588085439193199,
-      "ci_low": -0.0176564086292885,
-      "ci_high": 0.003376040004147111,
-      "prob_a_gt_b": 0.099,
-      "n_resamples": 2000,
       "model_a": "efficientnet_b0",
       "model_b": "mobilenetv3_small",
-      "interpretation": "\u0394AUC(A\u2212B)=-0.0066 [-0.0177,+0.0034] \u2014 not significant (CI spans 0)"
+      "bootstrap": {
+        "mean_delta_auc": -0.0066,
+        "ci_low": -0.0177,
+        "ci_high": 0.0034,
+        "prob_a_gt_b": 0.099
+      },
+      "delong": {
+        "delta_auc": -0.0065,
+        "z": -1.2551,
+        "p_value": 0.2094
+      },
+      "mcnemar": {
+        "n01_A_wrong_B_right": 13,
+        "n10_A_right_B_wrong": 40,
+        "chi2_cc": 12.7547,
+        "p_value": 0.0003
+      }
     },
     {
-      "mean_delta_auc": -0.014815479025833921,
-      "ci_low": -0.02686044871423494,
-      "ci_high": -0.004397428118058734,
-      "prob_a_gt_b": 0.0035,
-      "n_resamples": 2000,
       "model_a": "resnet18",
       "model_b": "mobilenetv3_small",
-      "interpretation": "\u0394AUC(A\u2212B)=-0.0148 [-0.0269,-0.0044] \u2014 significant"
+      "bootstrap": {
+        "mean_delta_auc": -0.0148,
+        "ci_low": -0.0269,
+        "ci_high": -0.0044,
+        "prob_a_gt_b": 0.004
+      },
+      "delong": {
+        "delta_auc": -0.0149,
+        "z": -2.5773,
+        "p_value": 0.01
+      },
+      "mcnemar": {
+        "n01_A_wrong_B_right": 13,
+        "n10_A_right_B_wrong": 16,
+        "chi2_cc": 0.1379,
+        "p_value": 0.7111
+      }
     }
   ],
+  "threshold_sweep_primary": [
+    {
+      "threshold": 0.1,
+      "sensitivity": 0.9923,
+      "specificity": 0.6496,
+      "f1": 0.901,
+      "accuracy": 0.8638
+    },
+    {
+      "threshold": 0.2,
+      "sensitivity": 0.9872,
+      "specificity": 0.7735,
+      "f1": 0.93,
+      "accuracy": 0.9071
+    },
+    {
+      "threshold": 0.3,
+      "sensitivity": 0.9769,
+      "specificity": 0.7949,
+      "f1": 0.9304,
+      "accuracy": 0.9087
+    },
+    {
+      "threshold": 0.4,
+      "sensitivity": 0.9718,
+      "specificity": 0.8248,
+      "f1": 0.9358,
+      "accuracy": 0.9167
+    },
+    {
+      "threshold": 0.5,
+      "sensitivity": 0.9667,
+      "specificity": 0.8376,
+      "f1": 0.9366,
+      "accuracy": 0.9183
+    },
+    {
+      "threshold": 0.6,
+      "sensitivity": 0.9667,
+      "specificity": 0.859,
+      "f1": 0.9425,
+      "accuracy": 0.9263
+    },
+    {
+      "threshold": 0.7,
+      "sensitivity": 0.959,
+      "specificity": 0.8632,
+      "f1": 0.9397,
+      "accuracy": 0.9231
+    },
+    {
+      "threshold": 0.8,
+      "sensitivity": 0.9513,
+      "specificity": 0.8932,
+      "f1": 0.944,
+      "accuracy": 0.9295
+    },
+    {
+      "threshold": 0.9,
+      "sensitivity": 0.9436,
+      "specificity": 0.9017,
+      "f1": 0.9424,
+      "accuracy": 0.9279
+    }
+  ],
+  "error_distribution_primary": {
+    "fp_mean": 0.8486,
+    "fp_std": 0.1524,
+    "n_fp": 38,
+    "fn_mean": 0.2357,
+    "fn_std": 0.1332,
+    "n_fn": 13,
+    "overlap_coefficient": 0.0
+  },
   "external_rsna_calibration": {
     "ece": 0.1195,
-    "brier": 0.1726
+    "brier": 0.1726,
+    "slope": 0.7884,
+    "intercept": -1.4995
   }
 }

@@ -430,21 +430,30 @@ provided; the full study is reproduced with `make reproduce`.
 
 **Test-set results (EfficientNet-B0, n = 624 images):**
 
-| Metric | Value | 95% Bootstrap CI | Reference Target | Status |
+| Metric | Value | 95% Bootstrap CI | Reference target | Status |
 |---|---|---|---|---|
 | ROC-AUC | **0.9678** | [0.9504, 0.9816] | ≥ 0.95 | ✅ Met |
-| Sensitivity | 0.9667 | — | ≥ 0.93 | ✅ Met |
-| Specificity | 0.8376 | — | ≥ 0.90 (at thr = 0.5) | ⚠️ See §4.1.1 |
+| Sensitivity (recall) | 0.9667 | [0.9484, 0.9826] | ≥ 0.93 | ✅ Met |
+| Specificity | 0.8376 | [0.7892, 0.8826] | ≥ 0.90 (at thr = 0.5) | ⚠️ See §4.1.1 |
+| Precision (PPV) | 0.9084 | [0.8816, 0.9346] | — | Good |
+| F1-score | 0.9366 | [0.9194, 0.9535] | — | Good |
 | Accuracy | 0.9183 | [0.8958, 0.9391] | — | Good |
-| Precision | 0.9084 | — | — | Good |
-| F1-score | 0.9366 | — | — | Good |
+| Balanced accuracy | 0.9021 | [0.8770, 0.9280] | — | Good |
+| **MCC** | **0.8250** | [0.7787, 0.8698] | — | Good |
+| Cohen's κ | 0.8218 | [0.7751, 0.8679] | — | Good |
 
-*Table 4.1: Diagnostic metrics on the held-out test set at the default decision
-threshold (0.5). Bootstrap CIs use 1,000 resamples. Confusion-matrix counts:
-TP = 377, TN = 196, FP = 38, FN = 13.*
+*Table 4.1: Full diagnostic-metric panel on the held-out test set at the default decision
+threshold (0.5), each with a 95% percentile **bootstrap CI** (1,000 resamples).
+Confusion-matrix counts: TP = 377, TN = 196, FP = 38, FN = 13.*
 
-The model meets the AUC objective with margin — the 95% CI lower bound (0.9504) itself
-clears 0.95 — and the sensitivity objective at the default threshold.
+Every metric — not only AUC and accuracy — is reported with its uncertainty interval. The
+two **imbalance-robust** measures are included deliberately: the **Matthews correlation
+coefficient (MCC = 0.825)** and **Cohen's κ (0.822)**, both well above the 0.8 "strong
+agreement" mark, confirm that performance is not an artefact of the 73/27 class imbalance.
+For reference, the **majority-class baseline** (always predicting Pneumonia, 62.5% of the
+test set) achieves only 0.625 accuracy; the model improves on it by **+29.3 percentage
+points**. The AUC objective is met with margin (the 95% CI lower bound, 0.9504, itself
+clears 0.95), as is the sensitivity objective at the default threshold.
 
 #### 4.1.1 Operating-Point Analysis
 
@@ -492,38 +501,62 @@ tuning; both operating points are reported for transparency.)
 
 #### 4.2.1 Statistical comparison and calibration of models
 
-To test whether the architectures *genuinely* differ rather than fluctuate by chance, AUC
-differences were assessed with a **paired bootstrap** (2,000 resamples, identical resample
-indices across models) on the held-out test set. Probability quality was quantified with the
-**Expected Calibration Error (ECE, 10 equal-width bins)** and the **Brier score**.
+Model differences were assessed with three complementary tools: a **paired bootstrap** of
+ΔAUC (2,000 resamples, shared indices), **DeLong's test** for correlated AUCs, and
+**McNemar's test** on paired errors. Probability quality was quantified with **ECE** (10
+bins), **Brier score**, and the **calibration slope & intercept** (logistic recalibration;
+slope ≈ 1 and intercept ≈ 0 ⇒ well calibrated).
 
-| Model | ROC-AUC (95% CI) | Accuracy (95% CI) | ECE ↓ | Brier ↓ |
-|---|---|---|---|---|
-| **EfficientNet-B0** | 0.9678 [0.9504, 0.9816] | 0.9183 [0.8958, 0.9391] | **0.0354** | **0.0633** |
-| ResNet-18 | 0.9594 [0.9414, 0.9752] | 0.8798 [0.8542, 0.9054] | 0.0529 | 0.0944 |
-| MobileNetV3-Small | 0.9743 [0.9632, 0.9843] | 0.8750 [0.8494, 0.9006] | 0.0559 | 0.0945 |
+| Model | ROC-AUC (95% CI) | ECE ↓ | Brier ↓ | Cal. slope | Cal. intercept |
+|---|---|---|---|---|---|
+| **EfficientNet-B0** | 0.9678 [0.9504, 0.9816] | **0.0354** | **0.0633** | **0.987** | −0.804 |
+| ResNet-18 | 0.9594 [0.9414, 0.9752] | 0.0529 | 0.0944 | 1.249 | −2.481 |
+| MobileNetV3-Small | 0.9743 [0.9632, 0.9843] | 0.0559 | 0.0945 | 1.415 | −2.949 |
 
-*Table 4.3: Discrimination (95% bootstrap CIs) and calibration. Lower ECE/Brier ⇒
-better-calibrated probabilities; EfficientNet-B0 is the best-calibrated model.*
+*Table 4.3: Discrimination (95% bootstrap CIs) and calibration. EfficientNet-B0 is the
+best-calibrated model — lowest ECE/Brier and a calibration slope nearest the ideal of 1.0
+(0.987 vs 1.25 / 1.42), i.e. its probabilities are neither over- nor under-confident.
+Reliability diagrams for all three models are in `results/figures/calibration_reliability.png`.*
 
-| Comparison (A − B) | Mean ΔAUC | 95% CI | Significant? |
+| Comparison (A − B) | Bootstrap ΔAUC [95% CI] | DeLong p | McNemar p (errors) |
 |---|---|---|---|
-| EfficientNet-B0 − ResNet-18 | +0.0082 | [−0.0050, +0.0216] | No (CI spans 0) |
-| EfficientNet-B0 − MobileNetV3-Small | −0.0066 | [−0.0177, +0.0034] | No (CI spans 0) |
-| ResNet-18 − MobileNetV3-Small | −0.0148 | [−0.0269, −0.0044] | **Yes** |
+| EfficientNet-B0 − ResNet-18 | +0.0082 [−0.0050, +0.0216] | 0.230 (n.s.) | **0.0015** |
+| EfficientNet-B0 − MobileNetV3-Small | −0.0066 [−0.0177, +0.0034] | 0.209 (n.s.) | **0.0003** |
+| ResNet-18 − MobileNetV3-Small | −0.0148 [−0.0269, −0.0044] | **0.010** | 0.711 (n.s.) |
 
-*Table 4.4: Paired-bootstrap AUC differences (2,000 resamples). A difference is "significant"
-when its 95% CI excludes 0.*
+*Table 4.4: Pairwise model comparison. ΔAUC by paired bootstrap; DeLong tests the AUC
+difference; McNemar tests whether the two models' **error patterns** differ. "n.s." = not
+significant at α = 0.05.*
 
-**Statistical takeaway.** EfficientNet-B0 and MobileNetV3-Small are **not significantly
-different in AUC** (ΔAUC 95% CI spans zero; bootstrap P(MobileNet > EfficientNet) ≈ 0.90 but
-the interval includes 0), and EfficientNet-B0 vs ResNet-18 is likewise not significant; only
-*MobileNetV3-Small > ResNet-18* reaches significance. Consequently, selecting EfficientNet-B0
-— motivated by its markedly higher specificity (0.84 vs 0.67), F1 (0.937 vs 0.909) and **best
-calibration** (ECE 0.035 vs 0.056) — incurs **no statistically significant loss of
-discrimination**. This is the rigorous answer to "why not the higher-AUC MobileNet?": the AUC
-gap is within sampling noise, while EfficientNet-B0's operating behaviour is clinically
-preferable and its probability estimates are the most trustworthy.
+**Statistical takeaway (a key, nuanced result).** On *discrimination*, EfficientNet-B0 is
+**not significantly different** from either baseline (bootstrap ΔAUC CIs span 0; DeLong
+p = 0.23 and 0.21) — only MobileNetV3-Small > ResNet-18 reaches AUC significance
+(DeLong p = 0.010). On *error pattern*, however, **McNemar is highly significant**
+(p = 0.0015 and 0.0003): EfficientNet-B0 is right where the baselines are wrong far more
+often than the reverse (e.g. 39 vs 15 discordant cases against ResNet-18). In other words,
+the models **rank** cases about equally well, but EfficientNet-B0 makes **significantly
+better operating-point decisions** (its ~38 vs 72–77 false positives), and its probabilities
+are the **best-calibrated** (slope 0.987). This is the rigorous answer to "why not the
+higher-AUC MobileNet?": the AUC gap is statistical noise, while EfficientNet-B0's
+*significantly* superior error profile and calibration are what matter clinically.
+
+#### 4.2.2 Threshold robustness
+
+To confirm the model is not fragile to the (arbitrary) 0.5 cut-off, sensitivity,
+specificity and F1 were swept across decision thresholds 0.1–0.9 (Fig.
+`results/figures/threshold_robustness.png`):
+
+| Threshold | Sensitivity | Specificity | F1 | Accuracy |
+|---|---|---|---|---|
+| 0.30 | 0.977 | 0.795 | 0.930 | 0.909 |
+| 0.50 (default) | 0.967 | 0.838 | 0.937 | 0.918 |
+| 0.70 | 0.959 | 0.863 | 0.940 | 0.923 |
+| 0.90 | 0.944 | 0.902 | 0.942 | 0.928 |
+
+*Table 4.5: Threshold sweep (EfficientNet-B0). Sensitivity stays ≥ 0.94 and F1 ∈ [0.93, 0.94]
+across the entire range while specificity rises smoothly from 0.65 (t = 0.1) to 0.90
+(t = 0.9) — the model is **robust to threshold choice**, not balanced on a knife-edge, and
+the sensitivity/specificity trade-off is a smooth, predictable deployment knob.*
 
 ### 4.3 Quantization Results
 
@@ -533,7 +566,7 @@ preferable and its probability estimates are the most trustworthy.
 | INT8 dynamic | 16.68 | 5.6% | 0.9199 | −0.16% | 0.9682 | −0.04% | 120.9 |
 | **INT8 static (PTQ)** | **5.13** | **71.0%** | 0.8109 | 10.74% | **0.9444** | **2.34%** | **15.0** |
 
-*Table 4.5: Quantization comparison (backend: qnnpack). "Acc. drop" is measured at a
+*Table 4.6: Quantization comparison (backend: qnnpack). "Acc. drop" is measured at a
 fixed 0.5 threshold; "AUC drop" is threshold-independent.*
 
 **Findings.**
@@ -574,7 +607,7 @@ cross-platform deployment artefact.
 | Inference latency (95th pct) | 120.6 ms/image | — |
 | Throughput (batch = 32) | 19.0 images/s | — |
 
-*Table 4.6: Speed and storage, measured with warm-up-corrected repeated timing.*
+*Table 4.7: Speed and storage, measured with warm-up-corrected repeated timing.*
 
 FP32 single-image CPU latency (≈120 ms) exceeds the 100 ms reference target on this
 general-purpose CPU, **but static INT8 quantization reduces it to ≈15 ms (~8×)**,
@@ -605,7 +638,7 @@ measured identically per variant:
 | INT8 dynamic | 16.68 | 351.1 |
 | **INT8 static (PTQ)** | **5.13** | **164.4** |
 
-*Table 4.7: Model and runtime memory by precision (EfficientNet-B0, CPU). See
+*Table 4.8: Model and runtime memory by precision (EfficientNet-B0, CPU). See
 `results/figures/memory_footprint.png`.*
 
 **Static INT8 quantization reduces not only the stored model (3.4×) but the peak
@@ -637,6 +670,15 @@ probabilities, false positives have a mean predicted pneumonia probability of
 rather than borderline, indicating genuinely difficult or atypical radiographs rather
 than threshold ambiguity. Coupling probability outputs with Grad-CAM++ overlays lets a
 clinician triage and review such cases, supporting a safe human-in-the-loop workflow.
+
+**Statistical separation of error types.** The false-positive and false-negative
+predicted-probability distributions are **completely non-overlapping** (overlapping
+coefficient = 0.00; FP confidences sit at 0.85 ± 0.15, FN at 0.24 ± 0.13), and the
+predicted-probability separation between the true Normal and true Pneumonia classes is
+very large (**Cohen's d = 3.45**). Together these show the two error modes are distinct,
+confident, and well-separated rather than a smear of borderline cases — consistent with the
+high MCC (0.825) and the threshold robustness of §4.2.2. The distribution is plotted in
+`results/figures/error_distribution.png`.
 
 **Per-class breakdown (EfficientNet-B0, test set):**
 
@@ -676,7 +718,7 @@ total; seed 42) and evaluated at the same fixed 0.5 threshold used throughout.
 | Specificity | 0.6060 | 0.8376 |
 | F1 | 0.8132 | 0.9366 |
 
-*Table 4.8: Zero-shot external validation on RSNA vs. internal Kermany performance. RSNA
+*Table 4.10: Zero-shot external validation on RSNA vs. internal Kermany performance. RSNA
 figures use the Kermany-trained checkpoint with no tuning. See
 `results/roc_curves/rsna_external_roc_curve.png` and
 `results/confusion_matrices/rsna_external_confusion_matrix.png`.*

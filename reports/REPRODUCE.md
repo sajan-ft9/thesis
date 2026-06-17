@@ -98,6 +98,7 @@ Every figure is regenerated automatically by the pipeline (no manual plotting):
 | `results/figures/<model>_pr_curve.*`, `results/roc_curves/*`, `results/confusion_matrices/*` | `make evaluate` |
 | `results/figures/quantization_comparison.*` | `make quantize` |
 | `results/figures/memory_footprint.*` | `make memory` |
+| `results/figures/calibration_reliability.*`, `threshold_robustness.*`, `error_distribution.*` | `make stats` |
 | `results/figures/<model>_gradcam_grid.*`, `results/gradcam/*` | `make explain` |
 
 All are produced end-to-end by `make reproduce`; none are hand-edited.

@@ -72,7 +72,7 @@ def main() -> int:
             ("RSNA F1", f"{rm['f1']:.4f}"),
         ]
 
-    # Statistical analysis (calibration) — included only if that step has been run.
+    # Statistical analysis (calibration + extended metrics) — only if that step has run.
     stats_path = METRICS / "statistical_analysis.json"
     if stats_path.exists():
         s = json.loads(stats_path.read_text(encoding="utf-8"))
@@ -82,6 +82,13 @@ def main() -> int:
                 (f"{name} ECE", f"{pm['ece']:.4f}"),
                 (f"{name} Brier", f"{pm['brier']:.4f}"),
             ]
+        cis = s["primary_full_cis"]
+        checks += [
+            ("primary MCC", f"{cis['mcc']['point']:.4f}"),
+            ("primary balanced accuracy", f"{cis['balanced_accuracy']['point']:.4f}"),
+            ("primary sensitivity CI low", f"{cis['sensitivity']['low']:.4f}"),
+            ("primary specificity CI low", f"{cis['specificity']['low']:.4f}"),
+        ]
 
     failures = []
     for label, expected in checks:
