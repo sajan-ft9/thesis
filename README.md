@@ -215,6 +215,7 @@ never hand-typed.
 | [`reports/THESIS_HANDBOOK.md`](reports/THESIS_HANDBOOK.md) | **Defense master reference** — glossary of every term, full system/code flow, methodology, results, and a defense Q&A |
 | [`reports/REPRODUCE.md`](reports/REPRODUCE.md) | Step-by-step reproduction guide |
 | [`reports/RUNBOOK.md`](reports/RUNBOOK.md) | Actual-vs-test command map, output paths, interpretation, and verified values |
+| [`reports/ACTUAL_RUN_RESULTS.md`](reports/ACTUAL_RUN_RESULTS.md) | Plain-language record of the latest actual run, results, commands, paths, and thesis placement |
 | [`reports/related_work_annotated.md`](reports/related_work_annotated.md) | Annotated bibliography (10 closely-related papers) |
 | [`reports/RESEARCH_PLAN.md`](reports/RESEARCH_PLAN.md) | Roadmap to a conference paper / PhD directions |
 | [`paper_assets/paper_ieee.tex`](paper_assets/paper_ieee.tex) | IEEE conference-paper draft (real numbers) |

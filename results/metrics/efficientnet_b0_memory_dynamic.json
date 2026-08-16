@@ -3,8 +3,8 @@
   "artifact_path": "models/efficientnet_b0_memory_int8_dynamic.pth",
   "model_size_mb": 16.69,
   "artifact_size_mb": 16.691,
-  "inference_peak_rss_mb": 541.1,
-  "rss_baseline_mb": 564.7,
+  "inference_peak_rss_mb": 563.2,
+  "rss_baseline_mb": 564.3,
   "measurement": "fresh subprocess; process RSS delta during full test inference; num_workers=0",
   "quantization": {}
 }

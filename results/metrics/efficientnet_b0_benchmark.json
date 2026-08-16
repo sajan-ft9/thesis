@@ -3,12 +3,12 @@
     "variant": "efficientnet_b0_fp32",
     "device": "cpu",
     "size_mb": 17.661,
-    "latency_ms_mean": 164.05,
-    "latency_ms_std": 15.926,
-    "latency_ms_median": 159.941,
-    "latency_ms_p95": 194.92,
-    "throughput_img_per_s": 27.01,
-    "peak_rss_delta_mb": 329.83,
+    "latency_ms_mean": 92.821,
+    "latency_ms_std": 12.893,
+    "latency_ms_median": 88.954,
+    "latency_ms_p95": 131.879,
+    "throughput_img_per_s": 41.71,
+    "peak_rss_delta_mb": 327.73,
     "latency_runs": 50
   }
 ]

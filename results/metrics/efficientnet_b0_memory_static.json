@@ -4,7 +4,7 @@
   "model_size_mb": 5.22,
   "artifact_size_mb": 5.223,
   "inference_peak_rss_mb": 222.7,
-  "rss_baseline_mb": 839.5,
+  "rss_baseline_mb": 828.8,
   "measurement": "fresh subprocess; process RSS delta during full test inference; num_workers=0",
   "quantization": {
     "qconfig": "custom_per_channel_symmetric_weights_histogram_activations",

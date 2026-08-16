@@ -3,12 +3,12 @@
     "variant": "mobilenetv3_small_fp32",
     "device": "cpu",
     "size_mb": 4.442,
-    "latency_ms_mean": 76.812,
-    "latency_ms_std": 11.186,
-    "latency_ms_median": 73.556,
-    "latency_ms_p95": 105.75,
-    "throughput_img_per_s": 131.47,
-    "peak_rss_delta_mb": 19.44,
+    "latency_ms_mean": 56.461,
+    "latency_ms_std": 20.154,
+    "latency_ms_median": 49.636,
+    "latency_ms_p95": 103.432,
+    "throughput_img_per_s": 229.93,
+    "peak_rss_delta_mb": 25.86,
     "latency_runs": 50
   }
 ]

@@ -3,12 +3,12 @@
     "variant": "resnet18_fp32",
     "device": "cpu",
     "size_mb": 45.321,
-    "latency_ms_mean": 103.525,
-    "latency_ms_std": 18.725,
-    "latency_ms_median": 100.359,
-    "latency_ms_p95": 111.634,
-    "throughput_img_per_s": 20.12,
-    "peak_rss_delta_mb": 250.57,
+    "latency_ms_mean": 46.016,
+    "latency_ms_std": 2.1,
+    "latency_ms_median": 45.519,
+    "latency_ms_p95": 49.335,
+    "throughput_img_per_s": 33.34,
+    "peak_rss_delta_mb": 224.96,
     "latency_runs": 50
   }
 ]

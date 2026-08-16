@@ -3,8 +3,8 @@
   "artifact_path": "/app/models/efficientnet_b0_best.pth",
   "model_size_mb": 17.67,
   "artifact_size_mb": 17.669,
-  "inference_peak_rss_mb": 559.7,
-  "rss_baseline_mb": 537.7,
+  "inference_peak_rss_mb": 544.4,
+  "rss_baseline_mb": 537.6,
   "measurement": "fresh subprocess; process RSS delta during full test inference; num_workers=0",
   "quantization": {}
 }

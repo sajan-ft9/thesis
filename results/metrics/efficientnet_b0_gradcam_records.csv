@@ -9,5 +9,5 @@ false_positive,45,Normal,Pneumonia,0.9812,efficientnet_b0_false_positive_0045_tr
 false_positive,52,Normal,Pneumonia,0.9683,efficientnet_b0_false_positive_0052_trueNormal_predPneumonia_p0.97.png
 false_negative,282,Pneumonia,Normal,0.2879,efficientnet_b0_false_negative_0282_truePneumonia_predNormal_p0.29.png
 false_negative,388,Pneumonia,Normal,0.4132,efficientnet_b0_false_negative_0388_truePneumonia_predNormal_p0.41.png
-false_negative,390,Pneumonia,Normal,0.3033,efficientnet_b0_false_negative_0390_truePneumonia_predNormal_p0.30.png
+false_negative,390,Pneumonia,Normal,0.3032,efficientnet_b0_false_negative_0390_truePneumonia_predNormal_p0.30.png
 false_negative,391,Pneumonia,Normal,0.0439,efficientnet_b0_false_negative_0391_truePneumonia_predNormal_p0.04.png
