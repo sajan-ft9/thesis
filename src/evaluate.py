@@ -63,13 +63,19 @@ def evaluate_checkpoint(
     cfg = cfg or ckpt_cfg
 
     data = build_dataloaders(cfg, seed=cfg.seed)
-    y_true, y_prob, _ = collect_predictions(model, data.test_loader, device, cfg.evaluate.threshold)
 
-    metrics = compute_metrics(y_true, y_prob, cfg.evaluate.threshold)
+    # The test set is strictly for final estimation.  Choose any operating point
+    # from validation predictions only; a test-derived threshold is optimistic and
+    # must never be presented as a deployment threshold.
+    y_val, p_val, _ = collect_predictions(model, data.val_loader, device, cfg.evaluate.threshold)
+    validation_youden = youden_threshold(y_val, p_val)
+    locked_threshold = float(cfg.evaluate.threshold)
+    y_true, y_prob, _ = collect_predictions(model, data.test_loader, device, locked_threshold)
+
+    metrics = compute_metrics(y_true, y_prob, locked_threshold)
     cis = metric_confidence_intervals(
-        y_true, y_prob, cfg.evaluate.bootstrap_n, cfg.evaluate.bootstrap_alpha, cfg.seed, cfg.evaluate.threshold
+        y_true, y_prob, cfg.evaluate.bootstrap_n, cfg.evaluate.bootstrap_alpha, cfg.seed, locked_threshold
     )
-    youden = youden_threshold(y_true, y_prob)
 
     results_dir = Path(cfg.paths.results_dir)
     metrics_dir = ensure_dir(results_dir / "metrics")
@@ -78,18 +84,18 @@ def evaluate_checkpoint(
     # Figures (lazy import to keep evaluate importable without a display).
     from .visualization import plot_confusion_matrix, plot_pr_curve, plot_roc_curve
 
-    cm = confusion_matrix(y_true, (y_prob >= cfg.evaluate.threshold).astype(int), labels=[0, 1])
+    cm = confusion_matrix(y_true, (y_prob >= locked_threshold).astype(int), labels=[0, 1])
     fig_cm = plot_confusion_matrix(cm, CLASS_NAMES, results_dir / "confusion_matrices", stem=f"{name}_confusion_matrix")
     fig_roc = plot_roc_curve(y_true, y_prob, results_dir / "roc_curves", stem=f"{name}_roc_curve")
     fig_pr = plot_pr_curve(y_true, y_prob, results_dir / "figures", stem=f"{name}_pr_curve")
 
     # Error analysis.
-    err_df = error_analysis(data.test_samples, y_true, y_prob, cfg.evaluate.threshold)
+    err_df = error_analysis(data.test_samples, y_true, y_prob, locked_threshold)
     err_csv = metrics_dir / f"{name}_error_cases.csv"
     err_df.to_csv(err_csv, index=False)
 
     report_txt = classification_report(
-        y_true, (y_prob >= cfg.evaluate.threshold).astype(int), target_names=list(CLASS_NAMES), zero_division=0
+        y_true, (y_prob >= locked_threshold).astype(int), target_names=list(CLASS_NAMES), zero_division=0
     )
 
     summary = {
@@ -98,7 +104,9 @@ def evaluate_checkpoint(
         "n_test": int(len(y_true)),
         "metrics": metrics,
         "confidence_intervals": cis,
-        "youden_threshold": youden,
+        "threshold": locked_threshold,
+        "threshold_source": "fixed configuration threshold; validation predictions retained separately",
+        "validation_youden_threshold": validation_youden,
         "n_errors": int(len(err_df)),
         "n_false_positive": int((err_df["error_type"] == "FP").sum()) if len(err_df) else 0,
         "n_false_negative": int((err_df["error_type"] == "FN").sum()) if len(err_df) else 0,
@@ -165,7 +173,7 @@ def evaluate_directory(
         "threshold": cfg.evaluate.threshold,
         "metrics": metrics,
         "confidence_intervals": cis,
-        "youden_threshold": youden,
+        "posthoc_external_youden_threshold": youden,
         "figures": {"confusion_matrix": fig_cm, "roc_curve": fig_roc},
         "note": "Exploratory external validation; existing trained checkpoint, inference only, no tuning.",
     }

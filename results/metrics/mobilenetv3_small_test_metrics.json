@@ -1,6 +1,6 @@
 {
   "experiment_name": "mobilenetv3_small",
-  "checkpoint": "models/mobilenetv3_small_best.pth",
+  "checkpoint": "/app/models/mobilenetv3_small_best.pth",
   "n_test": 624,
   "metrics": {
     "accuracy": 0.875,
@@ -31,11 +31,13 @@
     "n_boot": 1000,
     "alpha": 0.05
   },
-  "youden_threshold": {
-    "threshold": 0.9347241520881653,
-    "sensitivity": 0.9512820512820512,
-    "specificity": 0.8888888888888888,
-    "youden_j": 0.8401709401709401
+  "threshold": 0.5,
+  "threshold_source": "fixed configuration threshold; validation predictions retained separately",
+  "validation_youden_threshold": {
+    "threshold": 0.5355926156044006,
+    "sensitivity": 0.9805194805194806,
+    "specificity": 0.9738805970149254,
+    "youden_j": 0.9544000775344059
   },
   "n_errors": 78,
   "n_false_positive": 77,

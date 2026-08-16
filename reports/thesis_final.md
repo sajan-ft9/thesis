@@ -69,11 +69,12 @@ byte-identical duplicate images** that would otherwise have leaked between the t
 and validation splits. Among architectures, all three exceed 0.95 AUC, but
 EfficientNet-B0 provides the **best precision/specificity balance** (38 false
 positives versus 72 and 77 for ResNet-18 and MobileNetV3-Small). **Static INT8
-quantization** compresses the model from **17.66 MB to 5.13 MB (−71%)**, reduces CPU
-latency ~8× (≈120 ms → ≈15 ms per image), and cuts **peak inference memory ≈6×
-(979.5 → 164.4 MB)** for a 2.34-percentage-point AUC cost, whereas **dynamic INT8**
-preserves accuracy but compresses by only ~6%. The lazy streaming data pipeline uses
-**9.4× less RAM** than naïve full-dataset loading (335.8 MB vs 3,140.9 MB). In an
+quantization** compresses the model from **17.67 MB to 5.22 MB (−70.5%)**, and cuts
+isolated inference RSS from **559.7 MB to 222.7 MB**, but is slower on the measured
+CPU backend (233.0 ms vs. 174.7 ms per image) and incurs a 2.51-percentage-point AUC
+cost, whereas **dynamic INT8** preserves accuracy but compresses by only ~6%. The lazy
+streaming data pipeline uses **23.3× less measured RSS** than naïve full-dataset loading
+(134.7 MB vs 3,141.1 MB). In an
 exploratory zero-shot test on the independent **RSNA** dataset (adult), the model retains a
 ROC-AUC of **0.889** — a modest, expected drop under domain shift, providing initial
 evidence of external generalization.
@@ -174,8 +175,8 @@ objective and answered in the indicated chapter:
 
 This study is deliberately bounded so that every claim is measurable: (i) the task is
 **binary** pneumonia-vs-normal classification (not multi-disease or lesion
-localization); (ii) evaluation uses the **Kermany pediatric** dataset, with external
-datasets left to future work; (iii) compression uses **post-training quantization**
+localization); (ii) evaluation uses the **Kermany pediatric** dataset, with one
+exploratory RSNA external probe; (iii) compression uses **post-training quantization**
 (dynamic and static INT8), not quantization-aware training; (iv) efficiency is measured
 on **workstation CPU/GPU as an edge proxy**, not on physical Raspberry Pi / Jetson
 hardware; and (v) explainability is assessed **qualitatively**, without a radiologist
@@ -202,8 +203,9 @@ independently useful contributions:
 
 1. **Data-integrity contribution.** An automatic check that detects byte-identical
    duplicate images and quantifies train/validation/test leakage by path and content
-   hash; on this dataset it removed 26 duplicates causing train↔validation leakage and
-   confirmed no cross-split duplicate leakage after training-set deduplication (§3.1) —
+   hash; on this dataset it removed 26 duplicate files, including 9 duplicate contents
+   that crossed the naïve train↔validation split, and confirmed no cross-split duplicate
+   leakage after training-set deduplication (§3.1) —
    rigour most CXR studies omit.
 2. **Reproducibility contribution.** A fully scripted, seed-controlled,
    configuration-driven pipeline with unit/integration tests and per-run manifests, so
@@ -212,13 +214,12 @@ independently useful contributions:
 3. **Explainability contribution.** Integrated Grad-CAM++ explanations for correctly
    classified, false-positive, and false-negative cases, used for genuine error analysis
    — with **no simulated survey or trust score** anywhere (§3.5, §4.5–4.6).
-4. **Quantization contribution.** A transparent dynamic-versus-static INT8 comparison,
-   including the practical finding that **per-channel** (not per-tensor) weight
-   quantization is required to keep EfficientNet-B0 from collapsing (§4.3).
+4. **Quantization contribution.** A transparent dynamic-versus-static INT8 comparison
+   with explicit artifact, accuracy, latency, RSS, backend, and observer provenance (§4.3).
 5. **Deployment-efficiency contribution.** A correct efficiency methodology — on-disk
    size, warm-up-corrected latency, throughput, and **sampled peak memory (RSS, not
-   `tracemalloc`)** — quantifying a 71% smaller, ~6× lower-memory, ~8× faster model and a
-   9.4× lower-RAM data pipeline (§4.4).
+   `tracemalloc`)** — quantifying a 70.5% smaller model, lower isolated inference RSS,
+   and a 23.3× lower-RSS data pipeline (§4.4).
 
 Together these support a fair three-architecture comparison (EfficientNet-B0 vs.
 ResNet-18 vs. MobileNetV3-Small) under an identical pipeline, and frame the work as a
@@ -280,9 +281,9 @@ inference [20]. *Dynamic* quantization typically targets linear layers only, whi
 *static* post-training quantization (PTQ) with a calibration pass also quantizes
 convolutions — important for convolution-heavy backbones. Cross-platform runtimes
 such as ONNX Runtime and TensorFlow Lite enable inference on ARM edge devices [21].
-A practical but under-reported subtlety, which this thesis documents empirically, is
-that the choice of quantization observer (per-tensor versus per-channel) is decisive
-for architectures such as EfficientNet.
+A practical deployment subtlety is that observer choice, calibration data, backend, and
+operator support can materially affect the result for architectures such as EfficientNet;
+this study reports one explicit configuration rather than generalising across all of them.
 
 ### 2.5 Identified Research Gap
 
@@ -399,9 +400,8 @@ Two post-training schemes are compared:
 2. **Static INT8 PTQ** — FX graph-mode static quantization with a calibration pass
    that also quantizes convolutions. We use **per-channel symmetric INT8 weights with
    histogram activation observers** and calibrate on the *clean* validation loader
-   (never the augmented training loader, and never the test set). This choice is
-   essential: the backend-default per-tensor configuration catastrophically degrades
-   EfficientNet-B0 (Section 4.4). The quantization backend is `qnnpack` (the supported
+   (never the augmented training loader, and never the test set). The quantization
+   backend is `qnnpack` (the supported
    engine on the host platform).
 
 The FP32 model is additionally exported to **ONNX** and verified with ONNX Runtime.
@@ -492,18 +492,19 @@ for completeness.
 At the default 0.5 threshold the model is sensitivity-leaning (Sens = 0.9667,
 Spec = 0.8376), appropriate for screening where missed pneumonia is costlier than a
 false alarm. The threshold-independent ROC-AUC (0.9678) shows strong overall
-discrimination. Tuning the threshold to the **Youden-optimal point (0.918)** rebalances
-the operating point to **sensitivity 0.9410 and specificity 0.9188**, which *meets* the
-0.90 specificity target at a modest sensitivity cost. The appropriate operating point
-is therefore a deployment choice; both are reported transparently.
+discrimination. A validation-only Youden analysis selected an exploratory threshold of
+**0.1516**; it is retained as a calibration diagnostic and was **not** used to tune the
+held-out test estimate. The reported test operating point remains the locked 0.5
+configuration threshold. The appropriate deployment operating point therefore requires
+a separate validation policy and should not be chosen from the test set.
 
 ### 4.2 Model Comparison (Baselines)
 
 | Model | Params (M) | ROC-AUC | Accuracy | Sensitivity | Specificity | F1 | FP / FN | CPU Latency (ms) | Size (MB) |
 |---|---|---|---|---|---|---|---|---|---|
-| **EfficientNet-B0** | 4.34 | 0.9678 | 0.9183 | 0.9667 | **0.8376** | **0.9366** | **38 / 13** | 119.7 | 17.66 |
-| ResNet-18 | 11.31 | 0.9594 | 0.8798 | 0.9923 | 0.6923 | 0.9117 | 72 / 3 | 15.2 | 45.32 |
-| MobileNetV3-Small | 1.08 | **0.9743** | 0.8750 | 0.9974 | 0.6709 | 0.9089 | 77 / 1 | 41.1 | 4.44 |
+| **EfficientNet-B0** | 4.34 | 0.9678 | 0.9183 | 0.9667 | **0.8376** | **0.9366** | **38 / 13** | 164.1 | 17.66 |
+| ResNet-18 | 11.31 | 0.9594 | 0.8798 | 0.9923 | 0.6923 | 0.9117 | 72 / 3 | 103.5 | 45.32 |
+| MobileNetV3-Small | 1.08 | **0.9743** | 0.8750 | 0.9974 | 0.6709 | 0.9089 | 77 / 1 | 76.8 | 4.44 |
 
 *Table 4.2: Architecture comparison under an identical pipeline. Best value per
 column in bold. Latency is single-image CPU inference (mean of repeated, warm-up-
@@ -606,9 +607,9 @@ the sensitivity/specificity trade-off is a smooth, predictable deployment knob.*
 
 | Variant | Size (MB) | Size ↓ | Accuracy | Acc. drop | ROC-AUC | AUC drop | CPU Latency (ms) |
 |---|---|---|---|---|---|---|---|
-| FP32 (baseline) | 17.66 | — | 0.9183 | — | 0.9678 | — | 122.4 |
-| INT8 dynamic | 16.68 | 5.6% | 0.9199 | −0.16% | 0.9682 | −0.04% | 120.9 |
-| **INT8 static (PTQ)** | **5.13** | **71.0%** | 0.8109 | 10.74% | **0.9444** | **2.34%** | **15.0** |
+| FP32 (baseline) | 17.67 | — | 0.9183 | — | 0.9678 | — | 174.7 |
+| INT8 dynamic | 16.69 | 5.5% | 0.9199 | −0.16% | 0.9683 | −0.05% | 136.9 |
+| **INT8 static (PTQ)** | **5.22** | **70.5%** | 0.7981 | 12.02% | **0.9427** | **2.51%** | **233.0** |
 
 *Table 4.6: Quantization comparison (backend: qnnpack). "Acc. drop" is measured at a
 fixed 0.5 threshold; "AUC drop" is threshold-independent.*
@@ -618,27 +619,19 @@ fixed 0.5 threshold; "AUC drop" is threshold-independent.*
    ±0.2%) but compresses by only ~6%, because it quantizes only the linear head while
    the convolutional body — the bulk of the parameters — remains FP32. It also yields
    no latency benefit here.
-2. **Static INT8 PTQ** compresses the model by **71% (17.66 → 5.13 MB)** and reduces
-   single-image CPU latency by roughly **8× (≈120 → ≈15 ms)**, for a **2.34-percentage-
-   point AUC reduction** (0.9678 → 0.9444). The larger drop in fixed-threshold accuracy
-   (to 0.8109) reflects a shift in probability calibration after quantization rather
-   than a loss of discrimination; re-tuning the decision threshold recovers most of the
-   accuracy, consistent with the comparatively small AUC change. Concretely, at the fixed
-   0.5 threshold the static-INT8 model's specificity falls to 0.500 (sensitivity rises to
-   0.997) — it over-predicts pneumonia — while dynamic INT8 preserves the operating point
-   (sensitivity 0.967, specificity 0.842). That a 0.50-vs-0.84 specificity swing coincides
-   with only a 2.34-point AUC change is direct evidence that quantization shifts probability
-   *calibration*, not class separability.
-3. **Methodological finding.** The backend-default *per-tensor* static configuration
-   collapsed EfficientNet-B0 to near-chance discrimination (AUC 0.40–0.60 across calibration
-   settings). The collapse was **observed repeatedly across calibration runs** (not a single
-   anomaly) and is **consistent with the documented sensitivity of depthwise-separable /
-   squeeze-excite architectures (EfficientNet, MobileNet) to per-tensor activation scaling**,
-   where a single scale per activation tensor cannot cover the wide, channel-dependent ranges
-   these blocks produce. Switching to **per-channel symmetric INT8 weights with histogram
-   activation observers**, and calibrating on clean (non-augmented) data, recovered AUC to
-   0.9444. This observer/qconfig choice is decisive for EfficientNet-class networks and is an
-   under-emphasised practical detail in applied CXR-quantization literature.
+2. **Static INT8 PTQ** compresses the model by **70.5% (17.67 → 5.22 MB)** and lowers
+   isolated inference RSS from **559.7 to 222.7 MB**, but it is **slower** in this
+   QNNPACK/CPU measurement (233.0 vs. 174.7 ms) and incurs a **2.51-percentage-point
+   AUC reduction** (0.9678 → 0.9427). Fixed-threshold accuracy falls to 0.7981 while
+   sensitivity rises to 0.9949 and specificity falls to 0.4701, so the compressed model
+   is not a universally better deployment choice. Dynamic INT8 preserves the operating
+   point more closely (sensitivity 0.9667, specificity 0.8419) and is faster than FP32,
+   but saves only 5.5% on artifact size.
+3. **Quantization-method boundary.** The reported static result uses per-channel symmetric
+   INT8 weights, histogram activation observers, and clean validation calibration. This
+   study does not claim that every backend or observer configuration behaves identically;
+   backend-specific operator support and calibration-set representativeness remain open
+   engineering variables.
 
 The FP32 model was also exported to ONNX and verified with ONNX Runtime, providing a
 cross-platform deployment artefact.
@@ -646,11 +639,10 @@ cross-platform deployment artefact.
 **Quantization caveats.** These static-PTQ results carry standard, important caveats.
 (i) **Calibration-set dependence** — the activation ranges are estimated from a finite
 calibration set (here the clean validation split); accuracy can vary with its size and
-representativeness. (ii) **Operator handling** — BatchNorm folding and the per-channel vs
-per-tensor observer choice materially change the outcome (the per-tensor collapse to
-AUC ≈ 0.40 is direct evidence). (iii) **Hardware/backend variability** — INT8 kernels are
-backend-specific (`qnnpack` on the Apple/ARM host); latency and even accuracy can differ on
-other backends (e.g. fbgemm/x86) and devices, so the reported speed-ups are indicative of,
+representativeness. (ii) **Operator handling** — BatchNorm folding and observer choice can
+materially change the outcome. (iii) **Hardware/backend variability** — INT8 kernels are
+backend-specific (`qnnpack` in the container); latency and even accuracy can differ on
+other backends (e.g. fbgemm/x86) and devices, so these measurements are indicative of,
 not identical to, on-device behaviour. Quantization-aware training would likely narrow the
 static-PTQ accuracy gap and is identified as future work (§6.2).
 
@@ -660,17 +652,17 @@ static-PTQ accuracy gap and is identified as future work (§6.2).
 
 | Metric | FP32 | INT8 static (PTQ) |
 |---|---|---|
-| Model size on disk | 17.66 MB | 5.13 MB |
-| Inference latency (mean) | 119.7 ms/image | 15.0 ms/image |
-| Inference latency (95th pct) | 120.6 ms/image | — |
-| Throughput (batch = 32) | 19.0 images/s | — |
+| Model size on disk | 17.67 MB | 5.22 MB |
+| Inference latency (mean) | 164.1 ms/image | 233.0 ms/image |
+| Inference latency (95th pct) | 194.9 ms/image | — |
+| Throughput (batch = 32) | 27.0 images/s | — |
 
 *Table 4.7: Speed and storage, measured with warm-up-corrected repeated timing.*
 
-FP32 single-image CPU latency (≈120 ms) exceeds the 100 ms reference target on this
-general-purpose CPU, **but static INT8 quantization reduces it to ≈15 ms (~8×)**,
-comfortably meeting the target — precisely the deployment motivation for quantization.
-(CPU figures are an edge proxy; on-device measurement is future work.)
+FP32 single-image CPU latency (164.1 ms) exceeds the 100 ms reference target on this
+general-purpose CPU, and static INT8 does not meet that target in this QNNPACK run.
+The result demonstrates an artifact/RSS trade-off rather than a speed win. CPU figures
+are an edge proxy; hardware-specific benchmarking is future work.
 
 #### 4.4.1 Memory-Footprint Analysis
 
@@ -681,9 +673,9 @@ allocations and would report misleading sub-megabyte values). Two measurements
 substantiate the memory-efficiency contribution.
 
 **(a) Streaming vs. naïve loading.** Iterating the lazy, path-based DataLoader for one
-pass over the training set peaks at **335.8 MB**, whereas pre-loading the same 5,216
+pass over the training set peaks at **134.7 MB**, whereas pre-loading the same 5,216
 images into a single in-RAM float32 tensor (the common non-streaming pattern) peaks at
-**3,140.9 MB** — a **9.4× reduction**. The naïve figure matches the nominal tensor
+**3,141.1 MB** — a **23.3× reduction**. The naïve figure matches the nominal tensor
 size (3,140.6 MB), validating the measurement. This lazy pipeline is the core enabler
 of operation on low-memory hardware.
 
@@ -692,19 +684,18 @@ measured identically per variant:
 
 | Variant | Model weights (MB) | Peak inference RSS (MB) |
 |---|---|---|
-| FP32 | 17.66 | 979.5 |
-| INT8 dynamic | 16.68 | 351.1 |
-| **INT8 static (PTQ)** | **5.13** | **164.4** |
+| FP32 | 17.67 | 559.7 |
+| INT8 dynamic | 16.69 | 541.1 |
+| **INT8 static (PTQ)** | **5.22** | **222.7** |
 
 *Table 4.8: Model and runtime memory by precision (EfficientNet-B0, CPU). See
 `results/figures/memory_footprint.png`.*
 
-**Static INT8 quantization reduces not only the stored model (3.4×) but the peak
-inference memory by ≈6× (979.5 → 164.4 MB)**, because activations as well as weights
-are represented in INT8; dynamic INT8 (linear-only) gives an intermediate runtime
-footprint with negligible storage savings. Combined with the streaming loader, the
-deployed static-INT8 configuration operates within a small, predictable memory budget
-appropriate for resource-constrained healthcare settings.
+**Static INT8 quantization reduces the stored model by 3.4× and the measured isolated
+RSS delta from 559.7 to 222.7 MB**, because activations as well as weights are represented
+in INT8; dynamic INT8 gives little artifact-size savings and only a small RSS reduction
+in this run. Combined with the streaming loader, the static-INT8 configuration has a
+smaller memory footprint, but its accuracy and latency trade-offs must be accepted.
 
 ### 4.5 Explainability
 
@@ -806,15 +797,17 @@ to an independent dataset; rigorous external and clinical validation remain futu
 
 ### 4.8 Key Findings (chapter summary)
 
-> 1. **The best model is not the highest-AUC model.** The three architectures are
->    statistically indistinguishable on AUC (DeLong, §4.2.1); EfficientNet-B0 is selected
+> 1. **The best model is not the highest-AUC model.** EfficientNet-B0 is not significantly
+>    different from either comparator on AUC in the pairwise DeLong tests, although the
+>    ResNet-18 versus MobileNetV3 comparison is significant at the uncorrected 0.05 level;
+>    EfficientNet-B0 is selected
 >    *a priori* (§3.9) for its **significantly** fewer false positives (McNemar p < 0.01)
 >    and best calibration (slope 0.987).
-> 2. **Quantization's cost is a calibration shift, not lost separability.** Static INT8
->    keeps discrimination (AUC −2.3 pt) while the fixed-threshold operating point moves;
->    per-channel quantization is required (per-tensor collapses).
-> 3. **Memory is the deployment bottleneck that is actually solved.** Static INT8 →
->    5.13 MB and ≈164 MB inference RAM; the streaming loader uses 9.4× less RAM than naïve
+> 2. **Quantization creates a clear trade-off.** Static INT8 keeps substantial
+>    discrimination (AUC −2.51 pt) and reduces artifact/RSS size, but is less accurate at
+>    the locked threshold and slower on the measured backend.
+> 3. **Memory is improved, not fully solved.** Static INT8 → 5.22 MB and ≈223 MB isolated
+>    RSS; the streaming loader uses 23.3× less measured RSS than naïve
 >    loading. The accuracy–efficiency frontier is plotted in
 >    `results/figures/accuracy_efficiency_tradeoff.png`.
 > 4. **External generalisation is partial and calibration-limited.** On RSNA, sensitivity
@@ -832,17 +825,18 @@ post-training quantization can deliver strong, well-calibrated pneumonia screeni
 within tight resource budgets — when each axis is *measured rigorously*. Concretely:
 EfficientNet-B0 attains test AUC 0.9678 (95% CI 0.9504–0.9816) with the best
 precision/specificity balance among the evaluated models; static INT8 quantization
-yields a 71% smaller, ~8× faster model for a 2.3-point AUC cost; and the data-integrity
-tooling removed real train↔validation leakage before it could bias model selection.
+yields a 70.5% smaller model with lower isolated inference RSS but slower measured CPU
+inference for a 2.51-point AUC cost; and the data-integrity tooling removed real
+train↔validation leakage before it could bias model selection.
 
 ### 5.2 Clinical Implications
 
 The framework is positioned as a **screening / decision-support** tool, not a
 standalone diagnostic. Its probability outputs and Grad-CAM++ overlays enable a
 human-in-the-loop workflow in which low-confidence or flagged cases are routed to
-expert review. The operating point is a deployment parameter: the default threshold
-favours sensitivity (suited to screening), while the Youden-optimal threshold gives a
-balanced sensitivity/specificity profile that meets a 0.90 specificity requirement.
+expert review. The operating point is a deployment parameter: the locked 0.5 threshold
+favours sensitivity (suited to screening). Any alternative threshold must be selected on
+a pre-specified validation policy and then evaluated once on a held-out test set.
 
 ### 5.3 Limitations
 
@@ -902,10 +896,10 @@ Pulling the results together, four comparisons frame what was actually achieved:
    are in the operating point — EfficientNet-B0 halves the false positives of either baseline
    (38 vs 72/77) and is the **best-calibrated** model (ECE 0.035 vs 0.053–0.056). Conclusion:
    for screening, calibration and specificity, not a fractional AUC, should drive the choice.
-2. **Cross-precision (FP32 → INT8).** Dynamic INT8 is "free" but barely compresses (~6%);
-   static INT8 is the deployment lever (−71% size, ~6× less RAM, ~8× faster) at a 2.3-point
-   AUC cost. The fixed-threshold specificity collapse (0.84→0.50) with near-unchanged AUC
-   shows the cost is **re-calibratable**, not lost separability.
+2. **Cross-precision (FP32 → INT8).** Dynamic INT8 barely compresses (~5.5%) but is
+   faster than FP32; static INT8 reduces artifact size by 70.5% and isolated RSS, but is
+   slower in this backend and costs 2.51 AUC points. The fixed-threshold specificity
+   collapse (0.84→0.47) shows that the operating point changes substantially after PTQ.
 3. **Cross-dataset (internal → external).** Generalisation to RSNA is reasonable on
    discrimination (AUC 0.968 → 0.889) and sensitivity is largely retained (0.967 → 0.955),
    but **calibration degrades sharply** (ECE 0.035 → 0.119, Brier 0.063 → 0.173): under
@@ -939,9 +933,9 @@ pneumonia detection from chest X-rays, built around a quantized EfficientNet-B0 
 evaluated with deliberate measurement rigour. On the held-out Kermany test set the
 model achieves **ROC-AUC 0.9678 (95% CI 0.9504–0.9816)**, **sensitivity 0.9667**, and
 the best precision/specificity balance among three architectures trained under an
-identical pipeline. **Static INT8 quantization** produces a **5.13 MB (−71%) model with
-~8× faster CPU inference and ≈6× lower peak inference memory (979.5 → 164.4 MB)** for a
-2.3-point AUC cost; together with a lazy streaming data pipeline that uses **9.4× less
+identical pipeline. **Static INT8 quantization** produces a **5.22 MB (−70.5%) model with
+lower isolated inference RSS (559.7 → 222.7 MB)** but slower measured CPU inference and
+a 2.51-point AUC cost; together with a lazy streaming data pipeline that uses **23.3× less
 RAM** than naïve full-dataset loading, the system operates within a small, predictable
 memory budget. An exploratory zero-shot test on the independent **RSNA** dataset
 (AUC 0.889) gives initial evidence of external generalization under domain shift.

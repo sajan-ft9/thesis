@@ -41,10 +41,10 @@ and machine-checked against the source data** (see [Verify every claim](#reprodu
 
 | | FP32 | INT8 static (PTQ) | Gain |
 |---|---|---|---|
-| Model size | 17.66 MB | **5.13 MB** | −71% |
-| CPU latency / image | ~120 ms | **~15 ms** | ~8× |
-| Peak inference RAM | 979.5 MB | **164.4 MB** | ~6× |
-| Streaming vs naïve data load | 335.8 MB | 3,140.9 MB | **9.4× less RAM** |
+| Model size | 17.67 MB | **5.22 MB** | −70.5% |
+| CPU latency / image | 174.7 ms | **233.0 ms** | static PTQ slower in QNNPACK |
+| Isolated inference RSS delta | 559.7 MB | **222.7 MB** | lower measured RSS |
+| Streaming vs naïve data load | 134.7 MB | 3,141.1 MB | **23.3× lower RSS** |
 
 **External validation (zero-shot, no tuning) — RSNA Pneumonia, n = 12,024 (adult; different source):**
 
@@ -56,14 +56,17 @@ and machine-checked against the source data** (see [Verify every claim](#reprodu
 A modest, *expected* drop under pediatric → adult domain shift — reported honestly, with no
 attempt to optimise the external score.
 
-**Data integrity:** an automatic check found and removed **26 duplicate images** that caused
-train↔validation leakage; the official test set was kept canonical and verified disjoint.
+**Data integrity:** an automatic check found **26 duplicate files** in the training pool; **9 duplicate
+contents crossed the naïve train↔validation split**. Deduplication was applied before the working
+split; the official test set was kept canonical and verified disjoint.
 
 ---
 
 ## Scientific integrity
 
-This project **does not fabricate results**. There are **no** simulated radiologist surveys,
+The repository contains **no simulated radiologist surveys or invented trust scores**. The
+committed result artifacts are internally consistent with the thesis claims, but independent
+reproduction from the licensed raw datasets is still required for scientific verification. There are
 **no** invented metrics, and **no** misleading `tracemalloc` memory figures. Every quantitative
 claim is produced by the code from raw data and is machine-verifiable:
 
@@ -162,6 +165,22 @@ make verify-numbers      # every headline number in the thesis == results/metric
 make lint                # ruff (style + import order)
 ```
 
+### Docker (CPU, real-data safe)
+
+The image contains the code and dependencies but never bundles the licensed medical datasets.
+Mount the local `data/`, `models/`, and `results/` directories at runtime:
+
+```bash
+docker compose build
+docker compose run --rm test
+docker compose run --rm real-validate       # validates the real Kermany dataset
+docker compose run --rm smoke                # synthetic smoke test only
+```
+
+For one-image CPU inference, place an image at `input/image.png` and run
+`docker compose run --rm inference`. The real research pipeline remains `make reproduce`; Docker
+does not change the dataset, labels, split, or reported results.
+
 ### Reproducibility & how to verify every claim
 Each claim in the thesis maps to a command — a reviewer can check them independently:
 
@@ -169,11 +188,11 @@ Each claim in the thesis maps to a command — a reviewer can check them indepen
 |---|---|
 | Test AUC 0.9678 (95% CI), sensitivity/specificity | `make train evaluate` → `results/metrics/efficientnet_b0_test_metrics.json` |
 | 3-model comparison (identical pipeline) | `make train train-baselines evaluate` → `results/tables/table3_model_comparison.md` |
-| INT8: −71% size, ~8× faster, ~6× less RAM | `make quantize benchmark memory` → `results/metrics/*_quantization.json`, `memory_profile.json` |
-| Streaming uses 9.4× less RAM than naïve load | `make memory` → `results/metrics/memory_profile.json` |
+| INT8: −70.5% static size, accuracy/latency/RSS trade-off | `make quantize benchmark memory` → `results/metrics/*_quantization.json`, `memory_profile.json` |
+| Streaming uses 23.3× lower measured RSS than naïve load | `make memory` → `results/metrics/memory_profile.json` |
 | 26 duplicates / train-val leakage removed | `make validate-data` → `results/metrics/dataset_validation.json` |
 | RSNA external AUC 0.8892 (zero-shot) | `make external-rsna` → `results/metrics/rsna_external_metrics.json` |
-| Thesis numbers match the data exactly | `make verify-numbers` (21/21 PASS) |
+| Thesis numbers match the data exactly | `make verify-numbers` (31/31 PASS) |
 
 Determinism: a single `seed_everything()` seeds Python/NumPy/PyTorch and makes DataLoaders
 deterministic; every training run writes a `metadata.json` manifest (timestamp, git SHA, seed,

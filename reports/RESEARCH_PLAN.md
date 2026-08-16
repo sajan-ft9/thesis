@@ -48,7 +48,7 @@ explainability-aware benchmark of efficient pneumonia detection."** It is novel 
    literature largely ignores (papers check accuracy after quantization, not
    explanations).
 
-Pillar 4 is the differentiator: *"Does a 71%-smaller INT8 model still look at the
+Pillar 4 is the differentiator: *"Does a 70.5%-smaller INT8 model still look at the
 right place?"* is a clean, publishable research question that ties efficiency and
 explainability together.
 

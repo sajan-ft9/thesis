@@ -1,0 +1,47 @@
+services:
+  test:
+    platform: linux/amd64
+    build: .
+    image: pneumonia-edge-xai:cpu
+    shm_size: "2gb"
+    command: python -m pytest -q
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./results:/app/results
+      - ./reports:/app/reports
+      - ./paper_assets:/app/paper_assets
+
+  smoke:
+    platform: linux/amd64
+    build: .
+    image: pneumonia-edge-xai:cpu
+    shm_size: "2gb"
+    command: bash scripts/run_smoke_test.sh
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./results:/app/results
+
+  real-validate:
+    platform: linux/amd64
+    build: .
+    image: pneumonia-edge-xai:cpu
+    shm_size: "2gb"
+    command: python -m src.dataset --config configs/efficientnet_b0.yaml
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./results:/app/results
+      - ./reports:/app/reports
+      - ./paper_assets:/app/paper_assets
+
+  inference:
+    platform: linux/amd64
+    build: .
+    image: pneumonia-edge-xai:cpu
+    shm_size: "2gb"
+    command: ["python", "-m", "src.inference", "--checkpoint", "/app/models/efficientnet_b0_best.pth", "--image", "/app/input/image.png", "--device", "cpu"]
+    volumes:
+      - ./models:/app/models:ro
+      - ./input:/app/input:ro

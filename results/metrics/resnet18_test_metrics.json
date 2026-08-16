@@ -1,6 +1,6 @@
 {
   "experiment_name": "resnet18",
-  "checkpoint": "models/resnet18_best.pth",
+  "checkpoint": "/app/models/resnet18_best.pth",
   "n_test": 624,
   "metrics": {
     "accuracy": 0.8798076923076923,
@@ -31,11 +31,13 @@
     "n_boot": 1000,
     "alpha": 0.05
   },
-  "youden_threshold": {
-    "threshold": 0.9477100372314453,
-    "sensitivity": 0.9461538461538461,
-    "specificity": 0.8888888888888888,
-    "youden_j": 0.835042735042735
+  "threshold": 0.5,
+  "threshold_source": "fixed configuration threshold; validation predictions retained separately",
+  "validation_youden_threshold": {
+    "threshold": 0.4446409046649933,
+    "sensitivity": 0.9844155844155844,
+    "specificity": 0.9813432835820896,
+    "youden_j": 0.965758867997674
   },
   "n_errors": 75,
   "n_false_positive": 72,

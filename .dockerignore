@@ -1,0 +1,12 @@
+.git
+.venv
+__pycache__
+*.pyc
+data/raw
+data/processed
+models/*.pth
+models/*.pt
+models/*.onnx
+results/metrics
+results/figures
+results/tables

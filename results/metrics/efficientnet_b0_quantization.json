@@ -6,42 +6,56 @@
   "variants": [
     {
       "variant": "FP32",
-      "size_mb": 17.661,
+      "artifact_path": "models/efficientnet_b0_fp32.pth",
+      "artifact_size_mb": 17.667,
       "accuracy": 0.9183,
       "auc": 0.9678,
       "sensitivity": 0.9667,
       "specificity": 0.8376,
-      "latency_ms_mean": 122.428,
-      "latency_ms_std": 5.458,
+      "latency_ms_mean": 174.684,
+      "latency_ms_std": 22.594,
+      "quantization": {},
       "acc_drop_pct": 0.0,
       "auc_drop_pct": 0.0,
-      "size_reduction_pct": 0.0
+      "size_reduction_pct": 0.0,
+      "size_mb": 17.667
     },
     {
       "variant": "INT8 dynamic",
-      "size_mb": 16.679,
+      "artifact_path": "models/efficientnet_b0_int8_dynamic.pth",
+      "artifact_size_mb": 16.688,
       "accuracy": 0.9199,
-      "auc": 0.9682,
+      "auc": 0.9683,
       "sensitivity": 0.9667,
       "specificity": 0.8419,
-      "latency_ms_mean": 120.863,
-      "latency_ms_std": 0.594,
+      "latency_ms_mean": 136.913,
+      "latency_ms_std": 19.035,
+      "quantization": {},
       "acc_drop_pct": -0.16,
-      "auc_drop_pct": -0.04,
-      "size_reduction_pct": 5.6
+      "auc_drop_pct": -0.05,
+      "size_reduction_pct": 5.5,
+      "size_mb": 16.688
     },
     {
       "variant": "INT8 static (PTQ)",
-      "size_mb": 5.129,
-      "accuracy": 0.8109,
-      "auc": 0.9444,
-      "sensitivity": 0.9974,
-      "specificity": 0.5,
-      "latency_ms_mean": 15.042,
-      "latency_ms_std": 0.151,
-      "acc_drop_pct": 10.74,
-      "auc_drop_pct": 2.34,
-      "size_reduction_pct": 71.0
+      "artifact_path": "models/efficientnet_b0_int8_static.pt",
+      "artifact_size_mb": 5.219,
+      "accuracy": 0.7981,
+      "auc": 0.9427,
+      "sensitivity": 0.9949,
+      "specificity": 0.4701,
+      "latency_ms_mean": 233.028,
+      "latency_ms_std": 17.047,
+      "quantization": {
+        "qconfig": "custom_per_channel_symmetric_weights_histogram_activations",
+        "weight_observer": "PerChannelMinMaxObserver",
+        "activation_observer": "HistogramObserver",
+        "fallback": false
+      },
+      "acc_drop_pct": 12.02,
+      "auc_drop_pct": 2.51,
+      "size_reduction_pct": 70.5,
+      "size_mb": 5.219
     }
   ]
 }

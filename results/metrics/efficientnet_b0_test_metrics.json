@@ -1,6 +1,6 @@
 {
   "experiment_name": "efficientnet_b0",
-  "checkpoint": "models/efficientnet_b0_best.pth",
+  "checkpoint": "/app/models/efficientnet_b0_best.pth",
   "n_test": 624,
   "metrics": {
     "accuracy": 0.9182692307692307,
@@ -9,7 +9,7 @@
     "sensitivity": 0.9666666666666667,
     "specificity": 0.8376068376068376,
     "f1": 0.9366459627329192,
-    "auc": 0.9677514792899408,
+    "auc": 0.9677514792899409,
     "tp": 377,
     "tn": 196,
     "fp": 38,
@@ -24,18 +24,20 @@
       "high": 0.9391025641025641
     },
     "auc": {
-      "point": 0.9677514792899408,
+      "point": 0.9677514792899409,
       "low": 0.9504203537438336,
       "high": 0.9815938536919384
     },
     "n_boot": 1000,
     "alpha": 0.05
   },
-  "youden_threshold": {
-    "threshold": 0.9184851050376892,
-    "sensitivity": 0.941025641025641,
-    "specificity": 0.9188034188034188,
-    "youden_j": 0.8598290598290598
+  "threshold": 0.5,
+  "threshold_source": "fixed configuration threshold; validation predictions retained separately",
+  "validation_youden_threshold": {
+    "threshold": 0.15158206224441528,
+    "sensitivity": 0.9844155844155844,
+    "specificity": 0.9813432835820896,
+    "youden_j": 0.965758867997674
   },
   "n_errors": 51,
   "n_false_positive": 38,

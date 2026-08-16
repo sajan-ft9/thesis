@@ -20,6 +20,8 @@ Run:
 from __future__ import annotations
 
 import argparse
+import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -27,11 +29,11 @@ import torch
 from PIL import Image
 from torch.utils.data import DataLoader
 
-from .benchmarking import benchmark_peak_rss, model_size_mb
+from .benchmarking import benchmark_peak_rss
 from .config import Config, add_config_cli_args, config_from_cli
 from .dataset import ChestXRayDataset, scan_split
-from .inference import collect_predictions, load_checkpoint
-from .quantize import dynamic_quantize, pick_backend, static_quantize
+from .inference import collect_predictions
+from .quantize import pick_backend
 from .transforms import build_eval_transform
 from .utils import get_logger, save_json
 
@@ -96,35 +98,41 @@ def _inference_pass(model: torch.nn.Module, loader, threshold: float) -> None:
 
 
 def profile_runtime_memory(checkpoint_path: str | Path, cfg: Config) -> dict[str, Any]:
-    """Peak RSS during test-set inference + on-disk size for FP32 / INT8 variants."""
-    from .dataset import build_dataloaders
-
-    device = torch.device("cpu")  # quantized inference is CPU-only; compare on equal footing
-    model_fp32, ckpt_cfg = load_checkpoint(checkpoint_path, device)
-    cfg = cfg or ckpt_cfg
-    data = build_dataloaders(cfg, seed=cfg.seed)
+    """Peak RSS during test inference in isolated subprocesses."""
+    metrics_dir = Path(cfg.paths.results_dir) / "metrics"
+    models_dir = Path(cfg.paths.models_dir)
+    metrics_dir.mkdir(parents=True, exist_ok=True)
+    models_dir.mkdir(parents=True, exist_ok=True)
     backend = pick_backend(cfg.quantize.backend)
-    thr = cfg.evaluate.threshold
-
     variants: list[dict[str, Any]] = []
 
-    def record(model: torch.nn.Module, label: str) -> None:
-        _, rss = benchmark_peak_rss(lambda: _inference_pass(model, data.test_loader, thr))
-        variants.append(
-            {"variant": label, "model_size_mb": round(model_size_mb(model), 2), "inference_peak_rss_mb": round(rss, 1)}
-        )
-        logger.info("[%s] weight size %.2f MB | inference peak RSS %.0f MB", label, variants[-1]["model_size_mb"], rss)
-
-    record(model_fp32, "FP32")
-    try:
-        record(dynamic_quantize(model_fp32, cfg.quantize.backend), "INT8 dynamic")
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("dynamic quant skipped: %s", exc)
-    try:
-        stat = static_quantize(model_fp32, data.val_loader, backend, cfg.data.img_size, cfg.quantize.calibration_batches)
-        record(stat, "INT8 static (PTQ)")
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("static PTQ skipped: %s", exc)
+    jobs = (
+        ("fp32", Path(checkpoint_path)),
+        ("dynamic", models_dir / f"{cfg.experiment_name}_memory_int8_dynamic.pth"),
+        ("static", models_dir / f"{cfg.experiment_name}_memory_int8_static.pt"),
+    )
+    for variant, artifact in jobs:
+        output = metrics_dir / f"{cfg.experiment_name}_memory_{variant}.json"
+        cmd = [
+            sys.executable,
+            "-m",
+            "src.memory_worker",
+            "--checkpoint",
+            str(checkpoint_path),
+            "--variant",
+            variant,
+            "--output",
+            str(output),
+            "--artifact",
+            str(artifact),
+        ]
+        try:
+            subprocess.run(cmd, check=True)
+            row = __import__("json").loads(output.read_text(encoding="utf-8"))
+            variants.append(row)
+            logger.info("[%s] artifact %.2f MB | isolated RSS delta %.0f MB", row["variant"], row["model_size_mb"], row["inference_peak_rss_mb"])
+        except (subprocess.CalledProcessError, OSError, ValueError) as exc:
+            logger.warning("%s memory profile skipped: %s", variant, exc)
 
     return {"backend": backend, "variants": variants}
 

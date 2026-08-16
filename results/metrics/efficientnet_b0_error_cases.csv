@@ -39,7 +39,7 @@ data/raw/chest_xray/test/NORMAL/test_normal_00228.jpeg,Normal,Pneumonia,0.9671,F
 data/raw/chest_xray/test/NORMAL/test_normal_00230.jpeg,Normal,Pneumonia,0.7396,FP,0.2396
 data/raw/chest_xray/test/PNEUMONIA/test_pneumonia_00282.jpeg,Pneumonia,Normal,0.2879,FN,0.2121
 data/raw/chest_xray/test/PNEUMONIA/test_pneumonia_00388.jpeg,Pneumonia,Normal,0.4132,FN,0.0868
-data/raw/chest_xray/test/PNEUMONIA/test_pneumonia_00390.jpeg,Pneumonia,Normal,0.3033,FN,0.1967
+data/raw/chest_xray/test/PNEUMONIA/test_pneumonia_00390.jpeg,Pneumonia,Normal,0.3032,FN,0.1968
 data/raw/chest_xray/test/PNEUMONIA/test_pneumonia_00391.jpeg,Pneumonia,Normal,0.0439,FN,0.4561
 data/raw/chest_xray/test/PNEUMONIA/test_pneumonia_00420.jpeg,Pneumonia,Normal,0.2154,FN,0.2846
 data/raw/chest_xray/test/PNEUMONIA/test_pneumonia_00473.jpeg,Pneumonia,Normal,0.0527,FN,0.4473

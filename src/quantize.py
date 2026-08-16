@@ -27,7 +27,7 @@ from typing import Any
 import torch
 import torch.nn as nn
 
-from .benchmarking import benchmark_latency, model_size_mb
+from .benchmarking import benchmark_latency, file_size_mb
 from .config import Config
 from .dataset import build_dataloaders
 from .inference import collect_predictions, load_checkpoint
@@ -93,10 +93,25 @@ def static_quantize(
         weight=PerChannelMinMaxObserver.with_args(dtype=torch.qint8, qscheme=torch.per_channel_symmetric),
     )
     try:
-        return _build(QConfigMapping().set_global(per_channel))
+        converted = _build(QConfigMapping().set_global(per_channel))
+        converted._publication_quantization = {  # type: ignore[attr-defined]
+            "qconfig": "custom_per_channel_symmetric_weights_histogram_activations",
+            "weight_observer": "PerChannelMinMaxObserver",
+            "activation_observer": "HistogramObserver",
+            "fallback": False,
+        }
+        return converted
     except Exception as exc:  # noqa: BLE001 - platform may not support per-channel; report and fall back
         logger.warning("Per-channel static PTQ failed (%s); falling back to backend default qconfig.", exc)
-        return _build(get_default_qconfig_mapping(backend))
+        converted = _build(get_default_qconfig_mapping(backend))
+        converted._publication_quantization = {  # type: ignore[attr-defined]
+            "qconfig": "backend_default_fallback",
+            "weight_observer": "backend_default",
+            "activation_observer": "backend_default",
+            "fallback": True,
+            "fallback_error": repr(exc),
+        }
+        return converted
 
 
 def export_onnx(model: nn.Module, path: str | Path, img_size: int = 224, opset: int = 13) -> bool:
@@ -147,31 +162,36 @@ def run_quantization_study(checkpoint_path: str | Path, cfg: Config | None = Non
     models_dir = ensure_dir(cfg.paths.models_dir)
     variants: list[dict[str, Any]] = []
 
-    def record(model: nn.Module, label: str) -> dict[str, Any]:
+    def record(model: nn.Module, label: str, artifact_path: Path) -> dict[str, Any]:
         metrics = _evaluate_cpu(model, data.test_loader, threshold)
         latency = benchmark_latency(model, device, (1, 3, img, img), cfg.benchmark.warmup, cfg.benchmark.repeats)
+        quant_meta = getattr(model, "_publication_quantization", {})
         row = {
             "variant": label,
-            "size_mb": round(model_size_mb(model), 3),
+            "artifact_path": str(artifact_path),
+            "artifact_size_mb": round(file_size_mb(artifact_path), 3),
             "accuracy": round(metrics["accuracy"], 4),
             "auc": round(metrics["auc"], 4),
             "sensitivity": round(metrics["sensitivity"], 4),
             "specificity": round(metrics["specificity"], 4),
             "latency_ms_mean": round(latency.mean_ms, 3),
             "latency_ms_std": round(latency.std_ms, 3),
+            "quantization": quant_meta,
         }
         variants.append(row)
         return row
 
     # FP32 baseline.
-    fp32_row = record(model_fp32, "FP32")
-    torch.save(model_fp32.state_dict(), models_dir / f"{cfg.experiment_name}_fp32.pth")
+    fp32_artifact = models_dir / f"{cfg.experiment_name}_fp32.pth"
+    torch.save(model_fp32.state_dict(), fp32_artifact)
+    fp32_row = record(model_fp32, "FP32", fp32_artifact)
 
     # Dynamic INT8.
     try:
         dyn = dynamic_quantize(model_fp32, cfg.quantize.backend)
-        record(dyn, "INT8 dynamic")
-        torch.save(dyn.state_dict(), models_dir / f"{cfg.experiment_name}_int8_dynamic.pth")
+        dyn_artifact = models_dir / f"{cfg.experiment_name}_int8_dynamic.pth"
+        torch.save(dyn.state_dict(), dyn_artifact)
+        record(dyn, "INT8 dynamic", dyn_artifact)
     except Exception as exc:  # noqa: BLE001
         logger.warning("Dynamic quantization failed: %s", exc)
 
@@ -180,11 +200,13 @@ def run_quantization_study(checkpoint_path: str | Path, cfg: Config | None = Non
     try:
         # Calibrate on the clean (non-augmented) validation loader; never the test set.
         stat = static_quantize(model_fp32, data.val_loader, backend, img, cfg.quantize.calibration_batches)
-        record(stat, "INT8 static (PTQ)")
+        static_artifact = models_dir / f"{cfg.experiment_name}_int8_static.pt"
         try:
-            torch.jit.save(torch.jit.script(stat), str(models_dir / f"{cfg.experiment_name}_int8_static.pt"))
+            torch.jit.save(torch.jit.script(stat), str(static_artifact))
         except Exception:  # noqa: BLE001 - scripting is best-effort
-            torch.save(stat.state_dict(), models_dir / f"{cfg.experiment_name}_int8_static.pth")
+            static_artifact = models_dir / f"{cfg.experiment_name}_int8_static.pth"
+            torch.save(stat.state_dict(), static_artifact)
+        record(stat, "INT8 static (PTQ)", static_artifact)
     except Exception as exc:  # noqa: BLE001
         static_supported = False
         logger.warning("Static PTQ unsupported/failed on backend '%s': %s", backend, exc)
@@ -196,7 +218,10 @@ def run_quantization_study(checkpoint_path: str | Path, cfg: Config | None = Non
     for row in variants:
         row["acc_drop_pct"] = round((fp32_row["accuracy"] - row["accuracy"]) * 100, 3)
         row["auc_drop_pct"] = round((fp32_row["auc"] - row["auc"]) * 100, 3)
-        row["size_reduction_pct"] = round((1 - row["size_mb"] / fp32_row["size_mb"]) * 100, 1)
+        row["size_reduction_pct"] = round((1 - row["artifact_size_mb"] / fp32_row["artifact_size_mb"]) * 100, 1)
+        # Keep the historical key as an alias for downstream tables while making
+        # the provenance explicit in the new artifact_size_mb field.
+        row["size_mb"] = row["artifact_size_mb"]
 
     summary = {
         "experiment_name": cfg.experiment_name,

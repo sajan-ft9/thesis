@@ -30,11 +30,11 @@ the held-out Kermany test set ($n{=}624$), a ROC-AUC of \textbf{0.968} (95\% CI
 0.950--0.982), sensitivity 0.967, specificity 0.838, and F1 0.937, with the best
 precision/specificity balance of the three models. An automated integrity check
 detected and removed \textbf{26 duplicate images} causing train--validation leakage.
-\textbf{Static INT8} quantization compresses the model \textbf{71\%} (17.7$\rightarrow$5.1~MB),
-speeds CPU inference \textbf{$\sim$8$\times$} (120$\rightarrow$15~ms), and cuts
-\textbf{peak inference memory $\sim$6$\times$} (980$\rightarrow$164~MB) for a
-2.3-point AUC cost, while a lazy streaming data pipeline uses \textbf{9.4$\times$ less
-RAM} than naïve full-dataset loading. All code, configurations, tests, and artifacts
+\textbf{Static INT8} quantization compresses the model \textbf{70.5\%} (17.67$\rightarrow$5.22~MB)
+and reduces isolated inference RSS (559.7$\rightarrow$222.7~MB), but is slower in the
+measured QNNPACK/CPU run (233.0 vs. 174.7~ms) and incurs a 2.51-point AUC cost, while
+a lazy streaming data pipeline uses \textbf{23.3$\times$ less measured RSS} than naïve
+full-dataset loading. All code, configurations, tests, and artifacts
 are released; no result is simulated.
 \end{abstract}
 
@@ -52,10 +52,10 @@ pediatric CXR data~\cite{benmalek2025,pneunet2026}, so the open problem is not
 \emph{whether} a small model works but \emph{how honestly it is evaluated and how
 efficiently it can be deployed}. Our contributions are: (1) an integrated, reproducible
 pipeline (three backbones, identical protocol) with confidence intervals; (2) an
-automatic data-integrity check that quantifies and removes train/validation leakage;
-(3) a transparent dynamic-vs-static INT8 quantization study, including the practical
-finding that per-channel weight quantization is required to keep EfficientNet-B0 from
-collapsing; and (4) a correct memory-footprint analysis (peak RSS, not
+ automatic data-integrity check that quantifies and removes train/validation leakage;
+ (3) a transparent dynamic-vs-static INT8 quantization study with explicit artifact,
+ backend, observer, latency, and accuracy provenance; and (4) a correct memory-footprint
+ analysis (peak RSS, not
 \texttt{tracemalloc}) covering both the data pipeline and per-precision inference.
 
 \section{Related Work}
@@ -87,7 +87,8 @@ ResNet-18 and MobileNetV3-Small.
 
 \subsection{Evaluation, Quantization, and Benchmarking}
 We report accuracy, sensitivity, specificity, F1, and ROC-AUC with bootstrap 95\% CIs
-(1{,}000 resamples) and the Youden-J operating point. We compare dynamic and static
+(1{,}000 resamples) at a locked 0.5 threshold; a validation-only Youden threshold is
+retained as an exploratory diagnostic and is not selected from the test set. We compare dynamic and static
 INT8 PTQ (FX graph mode, per-channel symmetric weights, histogram activation observers,
 calibrated on clean validation data; \texttt{qnnpack} backend). Efficiency is measured
 as on-disk size, warmup-corrected latency, throughput, and peak process RSS.
@@ -99,7 +100,8 @@ specificity 0.838, F1 0.937 (Table~\ref{tab:final}). All three backbones exceed 
 AUC; MobileNetV3-Small has the highest AUC (0.974) at the smallest size (4.4~MB), but
 the baselines over-predict pneumonia (72 and 77 false positives vs.\ 38 for
 EfficientNet-B0), so EfficientNet-B0 gives the best precision/specificity balance
-(Table~\ref{tab:models}). At the Youden threshold (0.918) specificity rises to 0.919.
+(Table~\ref{tab:models}). The validation-only Youden diagnostic selected threshold 0.1516;
+it was not used to tune the held-out test estimate.
 \input{../results/tables/table4_final_performance.tex}
 \input{../results/tables/table3_model_comparison.tex}
 
@@ -109,14 +111,12 @@ EfficientNet-B0), so EfficientNet-B0 gives the best precision/specificity balanc
 \end{figure}
 
 \subsection{Quantization, Efficiency, and Memory}
-Dynamic INT8 preserves AUC ($-0.04\%$) but compresses only $\sim$6\%; static INT8 PTQ
-compresses 71\% (17.7$\rightarrow$5.1~MB), is $\sim$8$\times$ faster on CPU
-(120$\rightarrow$15~ms), and reduces peak inference memory $\sim$6$\times$
-(980$\rightarrow$164~MB) for a 2.34-point AUC cost (Tables~\ref{tab:quant},
-\ref{tab:efficiency}). The lazy streaming loader uses 9.4$\times$ less RAM than
-loading the dataset into memory (336~MB vs.\ 3{,}141~MB). The backend-default
-per-tensor configuration collapses EfficientNet-B0 (AUC~$\approx$0.40); per-channel
-weights recover it.
+Dynamic INT8 preserves AUC ($-0.05\%$) but compresses only 5.5\%; static INT8 PTQ
+compresses 70.5\% (17.67$\rightarrow$5.22~MB), reduces isolated inference RSS
+(559.7$\rightarrow$222.7~MB), but is slower on CPU (233.0 vs. 174.7~ms) and incurs a
+2.51-point AUC cost (Tables~\ref{tab:quant}, \ref{tab:efficiency}). The lazy streaming
+loader uses 23.3$\times$ less measured RSS than loading the dataset into memory
+(134.7~MB vs.\ 3{,}141.1~MB). These results are backend- and calibration-specific.
 \input{../results/tables/table5_quantization.tex}
 \input{../results/tables/table6_efficiency.tex}
 
@@ -144,23 +144,22 @@ qualitative; clinician validation is future work.
 \section{Discussion}
 All evaluated lightweight backbones are accurate on this task; the contribution is
 \emph{rigour}: leakage control, confidence intervals, a quantization-scheme comparison,
-and memory measurement. Static INT8 is the recommended deployment configuration --- it
-cuts both storage and runtime memory several-fold at a small, threshold-recoverable
-accuracy cost --- with per-channel quantization as a necessary detail for
-EfficientNet-class models. The system is positioned as screening/decision support, with
-the operating point a deployment parameter.
+and memory measurement. Static INT8 is a storage/RSS trade-off rather than an automatic
+speed win, and its fixed-threshold accuracy cost must be accepted or addressed by a
+separately validated calibration policy. The system is positioned as screening/decision
+support, with the operating point a deployment parameter.
 
 \section{Limitations and Future Work}
-Single (pediatric, single-institution) dataset; no external, clinical-reader, or
-on-device-hardware validation (none simulated); class imbalance. Future work: external
-validation (NIH ChestX-ray14, CheXpert), quantization-aware training to close the PTQ
-gap, on-device (Raspberry Pi / Jetson) benchmarking, and quantitative explanation
-evaluation against bounding boxes (e.g., RSNA).
+Single pediatric, single-institution primary dataset; one exploratory zero-shot RSNA
+probe; no clinical-reader or on-device-hardware validation (none simulated); class
+imbalance; and no patient-level independence audit beyond available metadata. Future
+work: multi-centre validation, quantization-aware training, on-device benchmarking,
+and quantitative explanation evaluation against bounding boxes.
 
 \section{Conclusion}
 A quantized, explainable EfficientNet-B0 delivers ROC-AUC 0.968 on held-out Kermany CXR
-while operating within a small, predictable memory budget (5.1~MB model, 164~MB peak
-inference RAM) --- shown through honest, reproducible measurement. Code and artifacts
+while reducing the measured artifact and isolated RSS budget (5.22~MB model, 222.7~MB
+RSS delta for static INT8), with a documented accuracy/latency trade-off. Code and artifacts
 are released.
 
 \begin{thebibliography}{1}
