@@ -171,15 +171,21 @@ The image contains the code and dependencies but never bundles the licensed medi
 Mount the local `data/`, `models/`, and `results/` directories at runtime:
 
 ```bash
-docker compose build
-docker compose run --rm test
-docker compose run --rm real-validate       # validates the real Kermany dataset
-docker compose run --rm smoke                # synthetic smoke test only
+make docker-build
+make docker-test                            # software tests; synthetic fixtures only
+make docker-smoke                           # end-to-end smoke test; synthetic only
+make docker-validate-data                   # actual Kermany data integrity checks
+make docker-actual                          # actual analysis using existing checkpoints
+make docker-reproduce                       # actual training + complete analysis
 ```
 
 For one-image CPU inference, place an image at `input/image.png` and run
-`docker compose run --rm inference`. The real research pipeline remains `make reproduce`; Docker
-does not change the dataset, labels, split, or reported results.
+`make docker-inference`. Docker does not change the dataset, labels, split, or reported
+results. `docker-test` and `docker-smoke` are not research runs and their numbers must
+never be reported.
+
+For the complete command/output map, including what each JSON, table, figure, checkpoint,
+and report means, read [`reports/RUNBOOK.md`](reports/RUNBOOK.md).
 
 ### Reproducibility & how to verify every claim
 Each claim in the thesis maps to a command — a reviewer can check them independently:
@@ -208,6 +214,7 @@ never hand-typed.
 | [`reports/thesis_final.md`](reports/thesis_final.md) | **The thesis** — full write-up with real, verified results |
 | [`reports/THESIS_HANDBOOK.md`](reports/THESIS_HANDBOOK.md) | **Defense master reference** — glossary of every term, full system/code flow, methodology, results, and a defense Q&A |
 | [`reports/REPRODUCE.md`](reports/REPRODUCE.md) | Step-by-step reproduction guide |
+| [`reports/RUNBOOK.md`](reports/RUNBOOK.md) | Actual-vs-test command map, output paths, interpretation, and verified values |
 | [`reports/related_work_annotated.md`](reports/related_work_annotated.md) | Annotated bibliography (10 closely-related papers) |
 | [`reports/RESEARCH_PLAN.md`](reports/RESEARCH_PLAN.md) | Roadmap to a conference paper / PhD directions |
 | [`paper_assets/paper_ieee.tex`](paper_assets/paper_ieee.tex) | IEEE conference-paper draft (real numbers) |
