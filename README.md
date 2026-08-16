@@ -42,9 +42,9 @@ and machine-checked against the source data** (see [Verify every claim](#reprodu
 | | FP32 | INT8 static (PTQ) | Gain |
 |---|---|---|---|
 | Model size | 17.67 MB | **5.22 MB** | −70.5% |
-| CPU latency / image | 174.7 ms | **233.0 ms** | static PTQ slower in QNNPACK |
-| Isolated inference RSS delta | 559.7 MB | **222.7 MB** | lower measured RSS |
-| Streaming vs naïve data load | 134.7 MB | 3,141.1 MB | **23.3× lower RSS** |
+| CPU latency / image | 104.5 ms | **152.7 ms** | static PTQ slower in QNNPACK quantization protocol |
+| Isolated inference RSS delta | 544.4 MB | **222.7 MB** | lower measured RSS |
+| Streaming vs naïve data load | 134.4 MB | 3,140.5 MB | **23.4× lower RSS** |
 
 **External validation (zero-shot, no tuning) — RSNA Pneumonia, n = 12,024 (adult; different source):**
 
@@ -195,7 +195,7 @@ Each claim in the thesis maps to a command — a reviewer can check them indepen
 | Test AUC 0.9678 (95% CI), sensitivity/specificity | `make train evaluate` → `results/metrics/efficientnet_b0_test_metrics.json` |
 | 3-model comparison (identical pipeline) | `make train train-baselines evaluate` → `results/tables/table3_model_comparison.md` |
 | INT8: −70.5% static size, accuracy/latency/RSS trade-off | `make quantize benchmark memory` → `results/metrics/*_quantization.json`, `memory_profile.json` |
-| Streaming uses 23.3× lower measured RSS than naïve load | `make memory` → `results/metrics/memory_profile.json` |
+| Streaming uses 23.4× lower measured RSS than naïve load | `make memory` → `results/metrics/memory_profile.json` |
 | 26 duplicates / train-val leakage removed | `make validate-data` → `results/metrics/dataset_validation.json` |
 | RSNA external AUC 0.8892 (zero-shot) | `make external-rsna` → `results/metrics/rsna_external_metrics.json` |
 | Thesis numbers match the data exactly | `make verify-numbers` (31/31 PASS) |
@@ -216,6 +216,9 @@ never hand-typed.
 | [`reports/REPRODUCE.md`](reports/REPRODUCE.md) | Step-by-step reproduction guide |
 | [`reports/RUNBOOK.md`](reports/RUNBOOK.md) | Actual-vs-test command map, output paths, interpretation, and verified values |
 | [`reports/ACTUAL_RUN_RESULTS.md`](reports/ACTUAL_RUN_RESULTS.md) | Plain-language record of the latest actual run, results, commands, paths, and thesis placement |
+| [`reports/PUBLICATION_BENCHMARK_RECORD.md`](reports/PUBLICATION_BENCHMARK_RECORD.md) | Single controlled timing/RAM record used for publication numbers |
+| [`reports/ETHICS_AND_DATA_ACCESS.md`](reports/ETHICS_AND_DATA_ACCESS.md) | Public-dataset ethics, exemption, provenance, and journal documentation note |
+| [`reports/EXTERNAL_DATASETS.md`](reports/EXTERNAL_DATASETS.md) | RSNA status and NIH ChestX-ray14/CheXpert addition plan |
 | [`reports/related_work_annotated.md`](reports/related_work_annotated.md) | Annotated bibliography (10 closely-related papers) |
 | [`reports/RESEARCH_PLAN.md`](reports/RESEARCH_PLAN.md) | Roadmap to a conference paper / PhD directions |
 | [`paper_assets/paper_ieee.tex`](paper_assets/paper_ieee.tex) | IEEE conference-paper draft (real numbers) |

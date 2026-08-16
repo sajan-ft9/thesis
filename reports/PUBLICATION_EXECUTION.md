@@ -1,5 +1,17 @@
 # Publication Execution Checklist
 
+## Current status
+
+The scope and manuscript language have been narrowed to a reproducible,
+memory-aware, quantized evaluation. The image-level split limitation is now stated
+explicitly, and the current controlled efficiency values are recorded in
+`PUBLICATION_BENCHMARK_RECORD.md`. A reproducible three-seed runner is available as
+`make docker-seed-sensitivity`, but the full CPU experiment remains pending because
+the Docker CPU runtime is substantially slower than the original accelerator run.
+
+The RSNA external probe is complete and remains supplementary. NIH ChestX-ray14 and
+CheXpert are not yet evaluated; see `EXTERNAL_DATASETS.md`.
+
 ## Phase 1 — Scope lock
 
 - [ ] Adopt the narrow title and primary research question in `PUBLICATION_RECOMMENDATIONS.md`.

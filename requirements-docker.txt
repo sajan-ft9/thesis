@@ -14,3 +14,4 @@ tensorboard>=2.16
 kagglehub>=0.3
 pydicom>=3.0
 pytest>=8.0
+ruff>=0.8,<1.0

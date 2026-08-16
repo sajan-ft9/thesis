@@ -11,11 +11,13 @@ DOCKER_RUN = $(COMPOSE) run --rm $(DOCKER_SERVICE)
 .PHONY: help setup test lint smoke validate-data train train-baselines \
         evaluate benchmark quantize explain memory stats tradeoff report render \
         verify-numbers external-rsna reproduce clean \
+        seed-sensitivity \
         docker-build docker-test docker-smoke docker-lint docker-validate-data \
         docker-train docker-train-baselines docker-evaluate docker-benchmark \
         docker-quantize docker-explain docker-memory docker-stats docker-tradeoff \
         docker-report docker-render docker-verify docker-external-rsna \
-        docker-inference docker-actual docker-reproduce docker-publication
+        docker-inference docker-actual docker-reproduce docker-publication \
+        docker-seed-sensitivity
 
 help:  ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -85,6 +87,9 @@ external-rsna:  ## Exploratory zero-shot external validation on RSNA (download +
 	$(PYTHON) -m src.evaluate --checkpoint $(CKPT) --external-dir data/processed/rsna_external --tag rsna_external --device cpu
 
 reproduce: validate-data train train-baselines evaluate benchmark quantize explain memory stats tradeoff report render  ## Full pipeline on the real dataset
+
+seed-sensitivity:  ## Train/evaluate/quantize EfficientNet-B0 with seeds 42, 43, and 44
+	$(PYTHON) scripts/run_seed_sensitivity.py --config $(PRIMARY) --seeds 42 43 44 --device cpu
 
 # Docker targets are the canonical portable entry points. `docker-test` and
 # `docker-smoke` are software tests and use synthetic fixtures; they must never
@@ -158,6 +163,9 @@ docker-inference:  ## Run one-image inference for input/image.png using the real
 docker-actual: docker-validate-data docker-evaluate docker-benchmark docker-quantize docker-explain docker-memory docker-stats docker-tradeoff docker-report docker-render docker-verify  ## Run the actual real-data analysis using existing checkpoints
 
 docker-reproduce: docker-validate-data docker-train docker-train-baselines docker-evaluate docker-benchmark docker-quantize docker-explain docker-memory docker-stats docker-tradeoff docker-report docker-render docker-verify  ## Train and run the complete actual real-data pipeline
+
+docker-seed-sensitivity:  ## Train/evaluate/quantize EfficientNet-B0 with seeds 42, 43, and 44
+	$(DOCKER_RUN) python scripts/run_seed_sensitivity.py --config /app/configs/efficientnet_b0.yaml --seeds 42 43 44 --device cpu
 
 docker-publication: docker-actual docker-external-rsna docker-report docker-render docker-verify  ## Rebuild the publication package including the optional RSNA probe
 

@@ -1,6 +1,6 @@
 # MASTER'S THESIS
 
-# Memory-Efficient and Explainable Deep Learning Framework for Pneumonia Detection from Chest X-Ray Images Using a Quantized EfficientNet-B0
+# Memory-Efficient and Quantized Pneumonia Detection from Pediatric Chest X-rays: A Reproducible Evaluation
 
 **Author:** Sajan
 **Degree:** Master of Science in Information Technology
@@ -41,11 +41,12 @@ chest X-ray (CXR) interpretation is limited. Deep-learning models can assist
 screening, but high-capacity architectures are computationally heavy and opaque,
 which hinders deployment on constrained hardware and limits clinical trust.
 
-**Objective.** This thesis designs, implements, and rigorously evaluates a unified
-framework that jointly addresses three axes for binary pneumonia detection on CXR
-images: (i) diagnostic performance, (ii) computational efficiency for
-resource-constrained deployment, and (iii) explainability. The emphasis throughout
-is on *measurement rigour and reproducibility* rather than benchmark maximisation.
+**Objective.** This thesis evaluates a compact pediatric pneumonia classifier on three
+engineering questions: (i) how well it separates the two classes on a held-out test
+set, (ii) what storage and process-memory trade-offs follow from INT8 quantization,
+and (iii) what qualitative error-analysis maps reveal. The emphasis is on
+*measurement rigour and reproducibility*, not clinical validation or a new model
+architecture.
 
 **Methods.** An ImageNet-pretrained **EfficientNet-B0** backbone with a custom
 binary head is trained with a staged transfer-learning schedule, label smoothing,
@@ -70,23 +71,22 @@ and validation splits. Among architectures, all three exceed 0.95 AUC, but
 EfficientNet-B0 provides the **best precision/specificity balance** (38 false
 positives versus 72 and 77 for ResNet-18 and MobileNetV3-Small). **Static INT8
 quantization** compresses the model from **17.67 MB to 5.22 MB (−70.5%)**, and cuts
-isolated inference RSS from **559.7 MB to 222.7 MB**, but is slower on the measured
-CPU backend (233.0 ms vs. 174.7 ms per image) and incurs a 2.51-percentage-point AUC
+isolated inference RSS from **544.4 MB to 222.7 MB**, but is slower in the quantization
+protocol (152.7 ms vs. 104.5 ms per image) and incurs a 2.51-percentage-point AUC
 cost, whereas **dynamic INT8** preserves accuracy but compresses by only ~6%. The lazy
-streaming data pipeline uses **23.3× less measured RSS** than naïve full-dataset loading
-(134.7 MB vs 3,141.1 MB). In an
+streaming data pipeline uses **23.4× less measured RSS** than naïve full-dataset loading
+(134.4 MB vs 3,140.5 MB). In an
 exploratory zero-shot test on the independent **RSNA** dataset (adult), the model retains a
 ROC-AUC of **0.889** — a modest, expected drop under domain shift, providing initial
 evidence of external generalization.
 
-**Conclusion.** Competitive pneumonia screening is achievable within tight resource
-budgets when a lightweight architecture, integrated explainability, and an
-appropriate quantization scheme are combined and *measured honestly*. The complete
-code, configurations, tests, and reproducibility artefacts are released to support
-replication and extension.
+**Conclusion.** This study provides a reproducible resource-aware benchmark for a
+compact pediatric pneumonia classifier. Static INT8 is a storage/memory trade-off,
+not an unconditional improvement, and the evidence remains limited to image-level
+public-dataset evaluation with no clinical or patient-level validation.
 
-**Keywords:** pneumonia detection, chest X-ray, EfficientNet-B0, Grad-CAM++,
-post-training quantization, edge AI, explainable AI, reproducible research.
+**Keywords:** pneumonia detection, chest X-ray, EfficientNet-B0, post-training
+quantization, INT8, resource measurement, reproducible research.
 
 ---
 
@@ -216,14 +216,14 @@ independently useful contributions:
    — with **no simulated survey or trust score** anywhere (§3.5, §4.5–4.6).
 4. **Quantization contribution.** A transparent dynamic-versus-static INT8 comparison
    with explicit artifact, accuracy, latency, RSS, backend, and observer provenance (§4.3).
-5. **Deployment-efficiency contribution.** A correct efficiency methodology — on-disk
+5. **Resource-measurement contribution.** A correct efficiency methodology — on-disk
    size, warm-up-corrected latency, throughput, and **sampled peak memory (RSS, not
    `tracemalloc`)** — quantifying a 70.5% smaller model, lower isolated inference RSS,
-   and a 23.3× lower-RSS data pipeline (§4.4).
+   and a 23.4× lower-RSS data pipeline (§4.4).
 
 Together these support a fair three-architecture comparison (EfficientNet-B0 vs.
 ResNet-18 vs. MobileNetV3-Small) under an identical pipeline, and frame the work as a
-template for honest, deployable medical AI rather than a single-model accuracy result.
+reproducible resource-aware evaluation rather than a single-model accuracy result.
 
 ### 1.8 Thesis Structure
 
@@ -310,8 +310,10 @@ class-imbalanced toward pneumonia (~73%). The dataset also ships a 16-image offi
 validation split, which is too small for reliable model selection and is **not used**.
 
 **Splitting.** Rather than rely on the tiny official validation split, we carve a
-**stratified 20% validation split** from the training folder and keep the **official
-test set untouched** for final evaluation.
+**stratified 20% image-level validation split** from the training folder and keep the
+**official test set untouched** for final evaluation. The available source release
+does not provide sufficient patient identifiers to establish patient-level
+independence; therefore this is not claimed as patient-level validation.
 
 **Integrity checking (a methodological contribution).** Before training, the
 pipeline computes per-split class balance, detects **byte-identical duplicate images**
@@ -607,9 +609,9 @@ the sensitivity/specificity trade-off is a smooth, predictable deployment knob.*
 
 | Variant | Size (MB) | Size ↓ | Accuracy | Acc. drop | ROC-AUC | AUC drop | CPU Latency (ms) |
 |---|---|---|---|---|---|---|---|
-| FP32 (baseline) | 17.67 | — | 0.9183 | — | 0.9678 | — | 174.7 |
-| INT8 dynamic | 16.69 | 5.5% | 0.9199 | −0.16% | 0.9683 | −0.05% | 136.9 |
-| **INT8 static (PTQ)** | **5.22** | **70.5%** | 0.7981 | 12.02% | **0.9427** | **2.51%** | **233.0** |
+| FP32 (baseline) | 17.67 | — | 0.9183 | — | 0.9678 | — | 104.5 |
+| INT8 dynamic | 16.69 | 5.5% | 0.9199 | −0.16% | 0.9683 | −0.05% | 105.9 |
+| **INT8 static (PTQ)** | **5.22** | **70.5%** | 0.7981 | 12.02% | **0.9427** | **2.51%** | **152.7** |
 
 *Table 4.6: Quantization comparison (backend: qnnpack). "Acc. drop" is measured at a
 fixed 0.5 threshold; "AUC drop" is threshold-independent.*
@@ -620,8 +622,8 @@ fixed 0.5 threshold; "AUC drop" is threshold-independent.*
    the convolutional body — the bulk of the parameters — remains FP32. It also yields
    no latency benefit here.
 2. **Static INT8 PTQ** compresses the model by **70.5% (17.67 → 5.22 MB)** and lowers
-   isolated inference RSS from **559.7 to 222.7 MB**, but it is **slower** in this
-   QNNPACK/CPU measurement (233.0 vs. 174.7 ms) and incurs a **2.51-percentage-point
+   isolated inference RSS from **544.4 to 222.7 MB**, but it is **slower** in the
+   quantization protocol (152.7 vs. 104.5 ms) and incurs a **2.51-percentage-point
    AUC reduction** (0.9678 → 0.9427). Fixed-threshold accuracy falls to 0.7981 while
    sensitivity rises to 0.9949 and specificity falls to 0.4701, so the compressed model
    is not a universally better deployment choice. Dynamic INT8 preserves the operating
@@ -653,15 +655,16 @@ static-PTQ accuracy gap and is identified as future work (§6.2).
 | Metric | FP32 | INT8 static (PTQ) |
 |---|---|---|
 | Model size on disk | 17.67 MB | 5.22 MB |
-| Inference latency (mean) | 164.1 ms/image | 233.0 ms/image |
-| Inference latency (95th pct) | 194.9 ms/image | — |
-| Throughput (batch = 32) | 27.0 images/s | — |
+| Inference latency (mean) | 92.821 ms/image | 152.698 ms/image |
+| Inference latency (95th pct) | 131.879 ms/image | — |
+| Throughput (batch = 32) | 41.71 images/s | — |
 
 *Table 4.7: Speed and storage, measured with warm-up-corrected repeated timing.*
 
-FP32 single-image CPU latency (164.1 ms) exceeds the 100 ms reference target on this
-general-purpose CPU, and static INT8 does not meet that target in this QNNPACK run.
-The result demonstrates an artifact/RSS trade-off rather than a speed win. CPU figures
+FP32 single-image CPU latency (92.821 ms in the architecture benchmark) is a
+container-CPU observation, while the separate quantization-study FP32 measurement was
+104.502 ms. Neither should be treated as a universal hardware target. Static INT8 does
+not meet the 100 ms reference in the quantization protocol. CPU figures
 are an edge proxy; hardware-specific benchmarking is future work.
 
 #### 4.4.1 Memory-Footprint Analysis
@@ -673,9 +676,9 @@ allocations and would report misleading sub-megabyte values). Two measurements
 substantiate the memory-efficiency contribution.
 
 **(a) Streaming vs. naïve loading.** Iterating the lazy, path-based DataLoader for one
-pass over the training set peaks at **134.7 MB**, whereas pre-loading the same 5,216
+pass over the training set peaks at **134.4 MB**, whereas pre-loading the same 5,216
 images into a single in-RAM float32 tensor (the common non-streaming pattern) peaks at
-**3,141.1 MB** — a **23.3× reduction**. The naïve figure matches the nominal tensor
+**3,140.5 MB** — a **23.4× reduction**. The naïve figure matches the nominal tensor
 size (3,140.6 MB), validating the measurement. This lazy pipeline is the core enabler
 of operation on low-memory hardware.
 
@@ -684,15 +687,15 @@ measured identically per variant:
 
 | Variant | Model weights (MB) | Peak inference RSS (MB) |
 |---|---|---|
-| FP32 | 17.67 | 559.7 |
-| INT8 dynamic | 16.69 | 541.1 |
+| FP32 | 17.67 | 544.4 |
+| INT8 dynamic | 16.69 | 563.2 |
 | **INT8 static (PTQ)** | **5.22** | **222.7** |
 
 *Table 4.8: Model and runtime memory by precision (EfficientNet-B0, CPU). See
 `results/figures/memory_footprint.png`.*
 
 **Static INT8 quantization reduces the stored model by 3.4× and the measured isolated
-RSS delta from 559.7 to 222.7 MB**, because activations as well as weights are represented
+RSS delta from 544.4 to 222.7 MB**, because activations as well as weights are represented
 in INT8; dynamic INT8 gives little artifact-size savings and only a small RSS reduction
 in this run. Combined with the streaming loader, the static-INT8 configuration has a
 smaller memory footprint, but its accuracy and latency trade-offs must be accepted.
@@ -807,7 +810,7 @@ to an independent dataset; rigorous external and clinical validation remain futu
 >    discrimination (AUC −2.51 pt) and reduces artifact/RSS size, but is less accurate at
 >    the locked threshold and slower on the measured backend.
 > 3. **Memory is improved, not fully solved.** Static INT8 → 5.22 MB and ≈223 MB isolated
->    RSS; the streaming loader uses 23.3× less measured RSS than naïve
+>    RSS; the streaming loader uses 23.4× less measured RSS than naïve
 >    loading. The accuracy–efficiency frontier is plotted in
 >    `results/figures/accuracy_efficiency_tradeoff.png`.
 > 4. **External generalisation is partial and calibration-limited.** On RSNA, sensitivity
@@ -842,9 +845,11 @@ a pre-specified validation policy and then evaluated once on a held-out test set
 
 These limitations are stated explicitly and are not hidden:
 
-1. **Single-dataset evaluation.** All data come from the single-institution Kermany
-   pediatric cohort; results may not transfer to other scanners, protocols, age groups,
-   or hospitals.
+1. **Image-level, single-dataset evaluation.** The working split is content-disjoint at
+   the image level, but the source release does not provide sufficient patient
+   identifiers to establish patient-level independence. All data come from the
+   single-institution Kermany pediatric cohort; results may not transfer to other
+   scanners, protocols, age groups, or hospitals.
 2. **Limited external validation.** The model was evaluated zero-shot on a single
    independent dataset (RSNA, §4.7) as an exploratory probe with a simple label mapping;
    it has not been validated on further datasets (e.g., NIH ChestX-ray14, CheXpert), nor
@@ -928,14 +933,14 @@ HIPAA, GDPR).
 
 ### 6.1 Conclusion
 
-This thesis presents a memory-efficient and explainable deep-learning framework for
-pneumonia detection from chest X-rays, built around a quantized EfficientNet-B0 and
+This thesis presents a reproducible, resource-aware evaluation of pneumonia detection
+from pediatric chest X-rays, built around a quantized EfficientNet-B0 and
 evaluated with deliberate measurement rigour. On the held-out Kermany test set the
 model achieves **ROC-AUC 0.9678 (95% CI 0.9504–0.9816)**, **sensitivity 0.9667**, and
 the best precision/specificity balance among three architectures trained under an
 identical pipeline. **Static INT8 quantization** produces a **5.22 MB (−70.5%) model with
-lower isolated inference RSS (559.7 → 222.7 MB)** but slower measured CPU inference and
-a 2.51-point AUC cost; together with a lazy streaming data pipeline that uses **23.3× less
+lower isolated inference RSS (544.4 → 222.7 MB)** but slower measured CPU inference and
+a 2.51-point AUC cost; together with a lazy streaming data pipeline that uses **23.4× less
 RAM** than naïve full-dataset loading, the system operates within a small, predictable
 memory budget. An exploratory zero-shot test on the independent **RSNA** dataset
 (AUC 0.889) gives initial evidence of external generalization under domain shift.

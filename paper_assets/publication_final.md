@@ -1,4 +1,4 @@
-# Memory-Efficient and Explainable Pneumonia Detection from Pediatric Chest X-rays: A Reproducible Evaluation of INT8 Post-Training Quantization
+# Memory-Efficient and Quantized Pneumonia Detection from Pediatric Chest X-rays: A Reproducible Evaluation
 
 **Author:** Sajan Khadka  
 **Affiliation:** [Department, University, Nepal]  
@@ -17,7 +17,7 @@ We performed a reproducible binary classification study using the real Kermany p
 
 ### Results
 
-The dataset audit removed 26 byte-identical duplicate files and left a leakage-clean split of 4,152 training, 1,038 validation, and 624 test images. On the held-out test set, EfficientNet-B0 achieved ROC-AUC 0.9678 (95% CI 0.9504–0.9816), accuracy 0.9183, sensitivity 0.9667, specificity 0.8376, and F1 0.9366. MobileNetV3-Small had the highest AUC (0.9743), but EfficientNet-B0 produced fewer false positives at the locked threshold (38 versus 72 for ResNet-18 and 77 for MobileNetV3-Small). Static INT8 reduced the measured on-disk artifact from 17.67 MB to 5.22 MB (70.5%) and isolated inference RSS from 559.7 MB to 222.7 MB, but reduced AUC to 0.9427 and increased latency from 174.7 ms to 233.0 ms per image in this CPU/QNNPACK run. Dynamic INT8 reduced artifact size by 5.5%, produced AUC 0.9683, and measured 136.9 ms latency. Streaming the training data used 134.7 MB RSS versus 3,141.1 MB for naïve full-tensor loading. A zero-shot probe on the real processed RSNA set (n=12,024) achieved AUC 0.8892 (95% CI 0.8825–0.8954), sensitivity 0.9553, specificity 0.6060, and F1 0.8132.
+The dataset audit removed 26 byte-identical duplicate files and left an image-level, content-disjoint split of 4,152 training, 1,038 validation, and 624 test images. Patient-level independence could not be established from the available source metadata. On the held-out test set, EfficientNet-B0 achieved ROC-AUC 0.9678 (95% CI 0.9504–0.9816), accuracy 0.9183, sensitivity 0.9667, specificity 0.8376, and F1 0.9366. MobileNetV3-Small had the highest AUC (0.9743), but EfficientNet-B0 produced fewer false positives at the locked threshold (38 versus 72 for ResNet-18 and 77 for MobileNetV3-Small). Static INT8 reduced the measured on-disk artifact from 17.67 MB to 5.22 MB (70.5%) and isolated inference RSS from 544.4 MB to 222.7 MB, but reduced AUC to 0.9427 and measured 152.7 ms latency versus 104.5 ms for FP32 in the quantization protocol. Dynamic INT8 reduced artifact size by 5.5%, produced AUC 0.9683, and measured 105.9 ms latency. Streaming the training data used 134.4 MB RSS versus 3,140.5 MB for naïve full-tensor loading. A zero-shot probe on the real processed RSNA set (n=12,024) achieved AUC 0.8892 (95% CI 0.8825–0.8954), sensitivity 0.9553, specificity 0.6060, and F1 0.8132.
 
 ### Conclusions
 
@@ -91,9 +91,9 @@ EfficientNet-B0’s extended test statistics were MCC 0.8250, balanced accuracy 
 
 | Variant | Artifact (MB) | Size reduction | Accuracy | AUC | AUC change | Latency (ms/image) |
 |---|---:|---:|---:|---:|---:|---:|
-| FP32 | 17.667 | — | 0.9183 | 0.9678 | — | 174.684 ± 22.594 |
-| INT8 dynamic | 16.688 | 5.5% | 0.9199 | 0.9683 | −0.05% | 136.913 ± 19.035 |
-| INT8 static PTQ | **5.219** | **70.5%** | 0.7981 | 0.9427 | −2.51% | 233.028 ± 17.047 |
+| FP32 | 17.667 | — | 0.9183 | 0.9678 | — | 104.502 ± 15.766 |
+| INT8 dynamic | 16.688 | 5.5% | 0.9199 | 0.9683 | −0.05% | 105.910 ± 17.719 |
+| INT8 static PTQ | **5.219** | **70.5%** | 0.7981 | 0.9427 | −2.51% | 152.698 ± 4.143 |
 
 Static PTQ provides the strongest storage reduction and lower isolated RSS, but the measured backend did not accelerate it. At the locked threshold, static PTQ increased sensitivity to 0.9949 while specificity fell to 0.4701. This is a deployment trade-off: a storage-constrained screening system might value the artifact reduction, but it requires a separately validated operating-point policy and cannot be described as an unconditional improvement.
 
@@ -101,10 +101,10 @@ Static PTQ provides the strongest storage reduction and lower isolated RSS, but 
 
 | Measurement | FP32 | INT8 dynamic | INT8 static PTQ |
 |---|---:|---:|---:|
-| Isolated inference RSS delta (MB) | 559.7 | 541.1 | **222.7** |
+| Isolated inference RSS delta (MB) | 544.4 | 563.2 | **222.7** |
 | Artifact size (MB) | 17.67 | 16.69 | **5.22** |
 
-The streaming loader peaked at 134.7 MB RSS, compared with 3,141.1 MB for naïve full-dataset float32 loading, a 23.3-fold difference in this controlled experiment. The primary EfficientNet FP32 benchmark measured 164.05 ms mean CPU latency and 27.0 images/s throughput; baseline means were 103.53 ms for ResNet-18 and 76.81 ms for MobileNetV3-Small. These are containerized CPU proxy measurements, not physical edge-device results.
+The streaming loader peaked at 134.4 MB RSS, compared with 3,140.5 MB for naïve full-dataset float32 loading, a 23.4-fold difference in this controlled experiment. The architecture benchmark measured 92.821 ms mean CPU latency and 41.71 images/s for EfficientNet-B0; the corresponding baseline means were 46.016 ms for ResNet-18 and 56.461 ms for MobileNetV3-Small. The separate quantization protocol measured 104.502 ms for FP32, 105.910 ms for dynamic INT8, and 152.698 ms for static INT8. These are containerized CPU proxy measurements, not physical edge-device results.
 
 ### 4.4 External domain-shift probe
 

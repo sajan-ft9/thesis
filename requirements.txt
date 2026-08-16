@@ -29,3 +29,4 @@ pydicom>=3.0
 
 # Development / testing
 pytest>=8.0
+ruff>=0.8,<1.0

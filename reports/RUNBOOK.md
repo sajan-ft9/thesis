@@ -190,8 +190,8 @@ CPU latency, latency variation, throughput, and sampled process RSS.
 **What to inspect:** `size_mb`, `latency_ms_mean`, `latency_ms_std`,
 `latency_ms_p95`, `throughput_img_per_s`, and `peak_rss_delta_mb`.
 
-**Verified FP32 CPU means:** EfficientNet-B0 164.05 ms/image and 27.0 images/s;
-ResNet-18 103.53 ms/image; MobileNetV3-Small 76.81 ms/image. These are container CPU
+**Publication benchmark record:** EfficientNet-B0 92.821 ms/image and 41.71 images/s;
+ResNet-18 46.016 ms/image; MobileNetV3-Small 56.461 ms/image. These are container CPU
 proxy measurements, not physical Raspberry Pi/Jetson results.
 
 ### `make docker-quantize`
@@ -215,8 +215,8 @@ per-channel symmetric weights, histogram activation observers, and QNNPACK.
 The static result is not automatically “better”: it trades size/RSS for accuracy and
 latency in this backend.
 
-**Verified results:** FP32 17.667 MB / AUC 0.9678 / 174.684 ms; dynamic INT8 16.688 MB /
-AUC 0.9683 / 136.913 ms; static INT8 5.219 MB / AUC 0.9427 / 233.028 ms.
+**Publication benchmark record:** FP32 17.667 MB / AUC 0.9678 / 104.502 ms; dynamic INT8 16.688 MB /
+AUC 0.9683 / 105.910 ms; static INT8 5.219 MB / AUC 0.9427 / 152.698 ms.
 
 ### `make docker-memory`
 
@@ -235,8 +235,8 @@ subprocess for each precision variant and samples process RSS during full test i
 **What to inspect:** `streaming_vs_naive`, `runtime_memory.variants`, `measurement`,
 `artifact_size_mb`, `inference_peak_rss_mb`, and `quantization` provenance.
 
-**Verified results:** streaming 134.7 MB versus naïve 3,141.1 MB, a 23.3-fold measured
-difference. Fresh-process inference RSS deltas were FP32 559.7 MB, dynamic INT8 541.1 MB,
+**Publication benchmark record:** streaming 134.4 MB versus naïve 3,140.5 MB, a 23.4-fold measured
+difference. Fresh-process inference RSS deltas were FP32 544.4 MB, dynamic INT8 563.2 MB,
 and static INT8 222.7 MB. RSS is a process-level proxy and depends on the platform.
 
 ### `make docker-stats`
@@ -345,8 +345,8 @@ suite:
 
 - EfficientNet-B0 Kermany test AUC: 0.9678 (95% CI 0.9504–0.9816).
 - EfficientNet-B0 accuracy/sensitivity/specificity/F1: 0.9183 / 0.9667 / 0.8376 / 0.9366.
-- Static INT8 artifact/AUC/latency: 5.219 MB / 0.9427 / 233.028 ms.
-- Streaming versus naïve RSS: 134.7 MB versus 3,141.1 MB.
+- Static INT8 artifact/AUC/latency: 5.219 MB / 0.9427 / 152.698 ms.
+- Streaming versus naïve RSS: 134.4 MB versus 3,140.5 MB.
 - RSNA exploratory AUC: 0.8892 (95% CI 0.8825–0.8954).
 - Software tests: 40 passing; thesis number checks: 31/31 passing.
 
@@ -356,4 +356,3 @@ Do not report smoke-test numbers. Do not call the RSNA probe clinical validation
 call RSS device memory or latency universal. Do not claim static INT8 is faster based only
 on its smaller file size. Always report the dataset, split, checkpoint, threshold,
 backend, calibration data, and output JSON path alongside a number.
-

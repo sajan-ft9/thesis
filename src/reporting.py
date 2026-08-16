@@ -252,9 +252,9 @@ def literature_comparison_template(out_dir: Path) -> dict[str, str]:
     # One example row pointing at THIS work; the rest are left blank for manual fill.
     example = {
         "Author": "This work", "Year": 2026, "Dataset": "Kermany (pediatric CXR)",
-        "Model": "EfficientNet-B0 + Grad-CAM++ + INT8", "Accuracy": "{{see Table 4}}",
+        "Model": "EfficientNet-B0 + qualitative Grad-CAM++ + INT8", "Accuracy": "{{see Table 4}}",
         "AUC": "{{see Table 4}}", "Explainability": "Integrated Grad-CAM++",
-        "Quantization": "Dynamic + static PTQ", "Edge Deployment Focus": "Yes",
+        "Quantization": "Dynamic + static PTQ", "Edge Deployment Focus": "CPU proxy only",
     }
     blanks = [dict.fromkeys(columns, "") for _ in range(6)]
     df = pd.DataFrame([example] + blanks, columns=columns)
@@ -271,9 +271,11 @@ LIMITATIONS_MD = """# Limitations
 
 These limitations are stated explicitly and must not be hidden in the thesis or paper.
 
-1. **Single-dataset evaluation.** All training and testing use the Kermany
-   pediatric chest X-ray dataset from a single institution. Results may not
-   transfer to other scanners, acquisition protocols, or hospitals.
+1. **Image-level, single-dataset evaluation.** The working split is content-disjoint
+   at the image level, but the source release does not provide sufficient patient
+   identifiers to establish patient-level independence. All training and testing use
+   the Kermany pediatric chest X-ray dataset from a single institution. Results may
+   not transfer to other scanners, acquisition protocols, or hospitals.
 
 2. **Limited external validation.** The model was evaluated zero-shot on one
    independent RSNA dataset using a simplified binary label mapping. This is

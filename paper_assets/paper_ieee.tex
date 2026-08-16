@@ -11,8 +11,8 @@
 
 \begin{document}
 
-\title{Memory-Efficient Explainable Pneumonia Detection Using a Quantized
-EfficientNet-B0 for Resource-Constrained Healthcare Environments}
+\title{Memory-Efficient Quantized Pneumonia Detection from Pediatric Chest X-rays:
+A Reproducible Evaluation}
 
 \author{\IEEEauthorblockN{Sajan}
 \IEEEauthorblockA{[Department]\\ [University]\\ sajankhad2@gmail.com}}
@@ -21,9 +21,9 @@ EfficientNet-B0 for Resource-Constrained Healthcare Environments}
 
 \begin{abstract}
 Pneumonia screening from chest X-rays (CXR) is valuable in low-resource settings, but
-high-capacity models are memory-heavy and opaque. We present a reproducible,
-deployment-honest framework combining a lightweight EfficientNet-B0 backbone,
-integrated Grad-CAM++ explanations, and post-training INT8 quantization (dynamic and
+high-capacity models are memory-heavy and their resource costs are often incompletely
+reported. We present a reproducible evaluation of a lightweight EfficientNet-B0
+backbone, qualitative Grad-CAM++ error analysis, and post-training INT8 quantization (dynamic and
 static PTQ), with rigorous statistical and \emph{memory} reporting. Under an identical
 pipeline against ResNet-18 and MobileNetV3-Small baselines, EfficientNet-B0 attains, on
 the held-out Kermany test set ($n{=}624$), a ROC-AUC of \textbf{0.968} (95\% CI
@@ -31,16 +31,16 @@ the held-out Kermany test set ($n{=}624$), a ROC-AUC of \textbf{0.968} (95\% CI
 precision/specificity balance of the three models. An automated integrity check
 detected and removed \textbf{26 duplicate images} causing train--validation leakage.
 \textbf{Static INT8} quantization compresses the model \textbf{70.5\%} (17.67$\rightarrow$5.22~MB)
-and reduces isolated inference RSS (559.7$\rightarrow$222.7~MB), but is slower in the
-measured QNNPACK/CPU run (233.0 vs. 174.7~ms) and incurs a 2.51-point AUC cost, while
-a lazy streaming data pipeline uses \textbf{23.3$\times$ less measured RSS} than naïve
+and reduces isolated inference RSS (544.4$\rightarrow$222.7~MB), but is slower in the
+quantization protocol (152.7 vs. 104.5~ms) and incurs a 2.51-point AUC cost, while
+a lazy streaming data pipeline uses \textbf{23.4$\times$ less measured RSS} than naïve
 full-dataset loading. All code, configurations, tests, and artifacts
 are released; no result is simulated.
 \end{abstract}
 
 \begin{IEEEkeywords}
-pneumonia detection, chest X-ray, EfficientNet, Grad-CAM++, INT8 quantization, memory
-efficiency, edge AI, explainable AI, reproducible research
+pneumonia detection, chest X-ray, EfficientNet, INT8 quantization, memory efficiency,
+qualitative error analysis, reproducible research
 \end{IEEEkeywords}
 
 \section{Introduction}
@@ -72,7 +72,8 @@ and latency; we additionally measure its effect on \emph{memory}.
 \section{Methodology}
 \subsection{Dataset, Integrity, and Splits}
 Kermany pediatric CXR~\cite{kermany2018} (train 5{,}216; test 624). A stratified 20\%
-validation split is carved from train and the official test set is held out. An
+image-level validation split is carved from train and the official test set is held out;
+patient-level independence cannot be established from the available source metadata. An
 automatic check (MD5 duplicates; path/content leakage) found 16 within-train duplicate
 groups and 9 train--validation content leaks; deduplicating the train pool (26 files)
 makes the splits content-disjoint while the test set stays canonical.
@@ -113,10 +114,10 @@ it was not used to tune the held-out test estimate.
 \subsection{Quantization, Efficiency, and Memory}
 Dynamic INT8 preserves AUC ($-0.05\%$) but compresses only 5.5\%; static INT8 PTQ
 compresses 70.5\% (17.67$\rightarrow$5.22~MB), reduces isolated inference RSS
-(559.7$\rightarrow$222.7~MB), but is slower on CPU (233.0 vs. 174.7~ms) and incurs a
+(544.4$\rightarrow$222.7~MB), but is slower in the quantization protocol (152.7 vs. 104.5~ms) and incurs a
 2.51-point AUC cost (Tables~\ref{tab:quant}, \ref{tab:efficiency}). The lazy streaming
-loader uses 23.3$\times$ less measured RSS than loading the dataset into memory
-(134.7~MB vs.\ 3{,}141.1~MB). These results are backend- and calibration-specific.
+loader uses 23.4$\times$ less measured RSS than loading the dataset into memory
+(134.4~MB vs.\ 3{,}140.5~MB). These results are backend- and calibration-specific.
 \input{../results/tables/table5_quantization.tex}
 \input{../results/tables/table6_efficiency.tex}
 

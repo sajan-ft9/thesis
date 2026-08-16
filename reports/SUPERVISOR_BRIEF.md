@@ -17,8 +17,8 @@ Kermany pediatric CXR dataset.
 | Diagnostic performance | AUC ≥ 0.95 | 0.968 (95% CI 0.950–0.982) | ✅ |
 | Sensitivity (screening) | ≥ 0.93 | 0.967 | ✅ |
 | Model size | < 50 MB | 5.22 MB (INT8 static) | ✅ |
-| CPU latency | < 100 ms | 233 ms (INT8) / 174.7 ms (FP32) | ❌ not met in QNNPACK run |
-| Isolated inference RSS delta | < 2 GB | 222.7 MB (INT8) / 559.7 MB (FP32) | ✅ measured proxy |
+| CPU latency | < 100 ms | 152.7 ms (INT8) / 104.5 ms (FP32) | ❌ not met in quantization run |
+| Isolated inference RSS delta | < 2 GB | 222.7 MB (INT8) / 544.4 MB (FP32) | ✅ measured proxy |
 | Explainability | Grad-CAM++ (correct/FP/FN) | 12 overlays | ✅ qualitative |
 | Reproducibility | seeded + tested | 40 tests, manifests, `make reproduce` | ✅ |
 
@@ -27,7 +27,7 @@ Kermany pediatric CXR dataset.
   best precision/specificity balance of the three models (38 false positives vs 72/77).
 - **Quantization:** static INT8 → **70.5% smaller and lower measured RSS, but slower CPU**,
   for a 2.3-point AUC cost; dynamic INT8 keeps accuracy but barely compresses.
-- **Memory:** streaming loader uses **23.3× lower measured RSS** than naïve full-dataset loading.
+- **Memory:** streaming loader uses **23.4× lower measured RSS** than naïve full-dataset loading.
 - **Data integrity:** automatically detected and removed **26 duplicate images** causing
   train/validation leakage; test set kept canonical.
 
