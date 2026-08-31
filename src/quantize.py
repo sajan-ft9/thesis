@@ -27,7 +27,7 @@ from typing import Any
 import torch
 import torch.nn as nn
 
-from .benchmarking import benchmark_latency, model_size_mb
+from .benchmarking import benchmark_latency, file_size_mb
 from .config import Config
 from .dataset import build_dataloaders
 from .inference import collect_predictions, load_checkpoint
@@ -147,12 +147,15 @@ def run_quantization_study(checkpoint_path: str | Path, cfg: Config | None = Non
     models_dir = ensure_dir(cfg.paths.models_dir)
     variants: list[dict[str, Any]] = []
 
-    def record(model: nn.Module, label: str) -> dict[str, Any]:
+    def record(model: nn.Module, label: str, artifact_path: Path) -> dict[str, Any]:
+        # Size is measured from the actual serialized file that would be deployed
+        # (not an in-memory re-serialization), so e.g. TorchScript archive overhead
+        # for the static-PTQ variant is reflected honestly.
         metrics = _evaluate_cpu(model, data.test_loader, threshold)
         latency = benchmark_latency(model, device, (1, 3, img, img), cfg.benchmark.warmup, cfg.benchmark.repeats)
         row = {
             "variant": label,
-            "size_mb": round(model_size_mb(model), 3),
+            "size_mb": round(file_size_mb(artifact_path), 3),
             "accuracy": round(metrics["accuracy"], 4),
             "auc": round(metrics["auc"], 4),
             "sensitivity": round(metrics["sensitivity"], 4),
@@ -164,14 +167,16 @@ def run_quantization_study(checkpoint_path: str | Path, cfg: Config | None = Non
         return row
 
     # FP32 baseline.
-    fp32_row = record(model_fp32, "FP32")
-    torch.save(model_fp32.state_dict(), models_dir / f"{cfg.experiment_name}_fp32.pth")
+    fp32_path = models_dir / f"{cfg.experiment_name}_fp32.pth"
+    torch.save(model_fp32.state_dict(), fp32_path)
+    fp32_row = record(model_fp32, "FP32", fp32_path)
 
     # Dynamic INT8.
     try:
         dyn = dynamic_quantize(model_fp32, cfg.quantize.backend)
-        record(dyn, "INT8 dynamic")
-        torch.save(dyn.state_dict(), models_dir / f"{cfg.experiment_name}_int8_dynamic.pth")
+        dyn_path = models_dir / f"{cfg.experiment_name}_int8_dynamic.pth"
+        torch.save(dyn.state_dict(), dyn_path)
+        record(dyn, "INT8 dynamic", dyn_path)
     except Exception as exc:  # noqa: BLE001
         logger.warning("Dynamic quantization failed: %s", exc)
 
@@ -180,11 +185,13 @@ def run_quantization_study(checkpoint_path: str | Path, cfg: Config | None = Non
     try:
         # Calibrate on the clean (non-augmented) validation loader; never the test set.
         stat = static_quantize(model_fp32, data.val_loader, backend, img, cfg.quantize.calibration_batches)
-        record(stat, "INT8 static (PTQ)")
+        static_path = models_dir / f"{cfg.experiment_name}_int8_static.pt"
         try:
-            torch.jit.save(torch.jit.script(stat), str(models_dir / f"{cfg.experiment_name}_int8_static.pt"))
+            torch.jit.save(torch.jit.script(stat), str(static_path))
         except Exception:  # noqa: BLE001 - scripting is best-effort
-            torch.save(stat.state_dict(), models_dir / f"{cfg.experiment_name}_int8_static.pth")
+            static_path = models_dir / f"{cfg.experiment_name}_int8_static.pth"
+            torch.save(stat.state_dict(), static_path)
+        record(stat, "INT8 static (PTQ)", static_path)
     except Exception as exc:  # noqa: BLE001
         static_supported = False
         logger.warning("Static PTQ unsupported/failed on backend '%s': %s", backend, exc)
