@@ -69,8 +69,8 @@ byte-identical duplicate images** that would otherwise have leaked between the t
 and validation splits. Among architectures, all three exceed 0.95 AUC, but
 EfficientNet-B0 provides the **best precision/specificity balance** (38 false
 positives versus 72 and 77 for ResNet-18 and MobileNetV3-Small). **Static INT8
-quantization** compresses the model from **17.66 MB to 5.13 MB (−71%)**, reduces CPU
-latency ~8× (≈120 ms → ≈15 ms per image), and cuts **peak inference memory ≈6×
+quantization** compresses the model from **17.67 MB to 5.22 MB (−70.5%)**, reduces CPU
+latency ~8× (≈133 ms → ≈16 ms per image), and cuts **peak inference memory ≈6×
 (979.5 → 164.4 MB)** for a 2.34-percentage-point AUC cost, whereas **dynamic INT8**
 preserves accuracy but compresses by only ~6%. The lazy streaming data pipeline uses
 **9.4× less RAM** than naïve full-dataset loading (335.8 MB vs 3,140.9 MB). In an
@@ -606,9 +606,9 @@ the sensitivity/specificity trade-off is a smooth, predictable deployment knob.*
 
 | Variant | Size (MB) | Size ↓ | Accuracy | Acc. drop | ROC-AUC | AUC drop | CPU Latency (ms) |
 |---|---|---|---|---|---|---|---|
-| FP32 (baseline) | 17.66 | — | 0.9183 | — | 0.9678 | — | 122.4 |
-| INT8 dynamic | 16.68 | 5.6% | 0.9199 | −0.16% | 0.9682 | −0.04% | 120.9 |
-| **INT8 static (PTQ)** | **5.13** | **71.0%** | 0.8109 | 10.74% | **0.9444** | **2.34%** | **15.0** |
+| FP32 (baseline) | 17.67 | — | 0.9183 | — | 0.9678 | — | 133.4 |
+| INT8 dynamic | 16.69 | 5.5% | 0.9199 | −0.16% | 0.9682 | −0.04% | 135.5 |
+| **INT8 static (PTQ)** | **5.22** | **70.5%** | 0.8109 | 10.74% | **0.9444** | **2.34%** | **16.3** |
 
 *Table 4.6: Quantization comparison (backend: qnnpack). "Acc. drop" is measured at a
 fixed 0.5 threshold; "AUC drop" is threshold-independent.*
@@ -618,8 +618,8 @@ fixed 0.5 threshold; "AUC drop" is threshold-independent.*
    ±0.2%) but compresses by only ~6%, because it quantizes only the linear head while
    the convolutional body — the bulk of the parameters — remains FP32. It also yields
    no latency benefit here.
-2. **Static INT8 PTQ** compresses the model by **71% (17.66 → 5.13 MB)** and reduces
-   single-image CPU latency by roughly **8× (≈120 → ≈15 ms)**, for a **2.34-percentage-
+2. **Static INT8 PTQ** compresses the model by **70.5% (17.67 → 5.22 MB)** and reduces
+   single-image CPU latency by roughly **8× (≈133 → ≈16 ms)**, for a **2.34-percentage-
    point AUC reduction** (0.9678 → 0.9444). The larger drop in fixed-threshold accuracy
    (to 0.8109) reflects a shift in probability calibration after quantization rather
    than a loss of discrimination; re-tuning the decision threshold recovers most of the
@@ -660,15 +660,16 @@ static-PTQ accuracy gap and is identified as future work (§6.2).
 
 | Metric | FP32 | INT8 static (PTQ) |
 |---|---|---|
-| Model size on disk | 17.66 MB | 5.13 MB |
-| Inference latency (mean) | 119.7 ms/image | 15.0 ms/image |
+| Model size on disk | 17.66 MB | 5.22 MB |
+| Inference latency (mean) | 119.7 ms/image | 16.3 ms/image |
 | Inference latency (95th pct) | 120.6 ms/image | — |
 | Throughput (batch = 32) | 19.0 images/s | — |
 
 *Table 4.7: Speed and storage, measured with warm-up-corrected repeated timing.*
 
 FP32 single-image CPU latency (≈120 ms) exceeds the 100 ms reference target on this
-general-purpose CPU, **but static INT8 quantization reduces it to ≈15 ms (~8×)**,
+general-purpose CPU, **but static INT8 quantization reduces it to ≈16 ms (~7–8×)**
+depending on which FP32 measurement it is compared against (Table 4.6 vs 4.7),
 comfortably meeting the target — precisely the deployment motivation for quantization.
 (CPU figures are an edge proxy; on-device measurement is future work.)
 
@@ -939,7 +940,7 @@ pneumonia detection from chest X-rays, built around a quantized EfficientNet-B0 
 evaluated with deliberate measurement rigour. On the held-out Kermany test set the
 model achieves **ROC-AUC 0.9678 (95% CI 0.9504–0.9816)**, **sensitivity 0.9667**, and
 the best precision/specificity balance among three architectures trained under an
-identical pipeline. **Static INT8 quantization** produces a **5.13 MB (−71%) model with
+identical pipeline. **Static INT8 quantization** produces a **5.22 MB (−70.5%) model with
 ~8× faster CPU inference and ≈6× lower peak inference memory (979.5 → 164.4 MB)** for a
 2.3-point AUC cost; together with a lazy streaming data pipeline that uses **9.4× less
 RAM** than naïve full-dataset loading, the system operates within a small, predictable

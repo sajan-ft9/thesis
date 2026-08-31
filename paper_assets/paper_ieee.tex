@@ -30,8 +30,8 @@ the held-out Kermany test set ($n{=}624$), a ROC-AUC of \textbf{0.968} (95\% CI
 0.950--0.982), sensitivity 0.967, specificity 0.838, and F1 0.937, with the best
 precision/specificity balance of the three models. An automated integrity check
 detected and removed \textbf{26 duplicate images} causing train--validation leakage.
-\textbf{Static INT8} quantization compresses the model \textbf{71\%} (17.7$\rightarrow$5.1~MB),
-speeds CPU inference \textbf{$\sim$8$\times$} (120$\rightarrow$15~ms), and cuts
+\textbf{Static INT8} quantization compresses the model \textbf{70.5\%} (17.7$\rightarrow$5.2~MB),
+speeds CPU inference \textbf{$\sim$8$\times$} (133$\rightarrow$16~ms), and cuts
 \textbf{peak inference memory $\sim$6$\times$} (980$\rightarrow$164~MB) for a
 2.3-point AUC cost, while a lazy streaming data pipeline uses \textbf{9.4$\times$ less
 RAM} than naïve full-dataset loading. All code, configurations, tests, and artifacts
@@ -110,8 +110,8 @@ EfficientNet-B0), so EfficientNet-B0 gives the best precision/specificity balanc
 
 \subsection{Quantization, Efficiency, and Memory}
 Dynamic INT8 preserves AUC ($-0.04\%$) but compresses only $\sim$6\%; static INT8 PTQ
-compresses 71\% (17.7$\rightarrow$5.1~MB), is $\sim$8$\times$ faster on CPU
-(120$\rightarrow$15~ms), and reduces peak inference memory $\sim$6$\times$
+compresses 70.5\% (17.7$\rightarrow$5.2~MB), is $\sim$8$\times$ faster on CPU
+(133$\rightarrow$16~ms), and reduces peak inference memory $\sim$6$\times$
 (980$\rightarrow$164~MB) for a 2.34-point AUC cost (Tables~\ref{tab:quant},
 \ref{tab:efficiency}). The lazy streaming loader uses 9.4$\times$ less RAM than
 loading the dataset into memory (336~MB vs.\ 3{,}141~MB). The backend-default
@@ -159,7 +159,7 @@ evaluation against bounding boxes (e.g., RSNA).
 
 \section{Conclusion}
 A quantized, explainable EfficientNet-B0 delivers ROC-AUC 0.968 on held-out Kermany CXR
-while operating within a small, predictable memory budget (5.1~MB model, 164~MB peak
+while operating within a small, predictable memory budget (5.2~MB model, 164~MB peak
 inference RAM) --- shown through honest, reproducible measurement. Code and artifacts
 are released.
 

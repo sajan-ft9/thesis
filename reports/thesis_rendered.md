@@ -58,10 +58,10 @@ timing; throughput; sampled peak process memory) — explicitly avoiding
 **Results.** On the held-out test set (n = 624), EfficientNet-B0 achieves
 ROC-AUC = 0.9678 (95% CI [0.9504, 0.9816]), accuracy = 0.9183,
 sensitivity = 0.9667, and specificity = 0.8376. Static INT8
-quantization reduces model size from 17.66 MB to 5.13 MB
-(71.0% reduction) with an accuracy change of
+quantization reduces model size from 17.67 MB to 5.22 MB
+(70.5% reduction) with an accuracy change of
 10.740% and an AUC change of 2.340%, whereas
-dynamic INT8 reduces size only to 16.68 MB (Linear layers only).
+dynamic INT8 reduces size only to 16.69 MB (Linear layers only).
 Full per-model and per-variant results are in Tables 3–6.
 
 **Conclusion.** Competitive pneumonia screening is achievable within tight
@@ -324,10 +324,10 @@ latency, size).
 
 Dynamic vs static INT8 (backend qnnpack):
 
-- FP32 size: 17.66 MB.
-- INT8 dynamic size: 16.68 MB (Linear layers only — modest reduction).
-- INT8 static (PTQ) size: 5.13 MB
-  (71.0% reduction), accuracy change 10.740%,
+- FP32 size: 17.67 MB.
+- INT8 dynamic size: 16.69 MB (Linear layers only — modest reduction).
+- INT8 static (PTQ) size: 5.22 MB
+  (70.5% reduction), accuracy change 10.740%,
   AUC change 2.340%.
 
 *Table 5 — Quantization Results: `results/tables/table5_quantization.md`.*
@@ -411,7 +411,7 @@ validation.
 This thesis delivers a reproducible, explainable, and quantization-aware pneumonia
 detection framework with rigorous, correctly measured efficiency reporting.
 Headline measured outcomes (fill from rendered results): test AUC 0.9678,
-static-INT8 size 5.13 MB (71.0% smaller than
+static-INT8 size 5.22 MB (70.5% smaller than
 FP32).
 
 ### 6.2 Future Work
