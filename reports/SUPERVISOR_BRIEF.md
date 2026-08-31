@@ -16,18 +16,21 @@ Kermany pediatric CXR dataset.
 |---|---|---|---|
 | Diagnostic performance | AUC ≥ 0.95 | 0.968 (95% CI 0.950–0.982) | ✅ |
 | Sensitivity (screening) | ≥ 0.93 | 0.967 | ✅ |
-| Model size | < 50 MB | 5.13 MB (INT8 static) | ✅ |
-| CPU latency | < 100 ms | 15 ms (INT8) / 120 ms (FP32) | ✅ via quantization |
-| Peak inference RAM | < 2 GB | 164 MB (INT8) / 980 MB (FP32) | ✅ |
+| Model size | < 50 MB | 5.22 MB (INT8 static) | ✅ |
+| CPU latency | < 100 ms | 16 ms (INT8) / 133 ms (FP32) | ✅ via quantization |
+| Inference-time RAM increase | < 2 GB | 39 MB (INT8) / 1156 MB (FP32), medians of 5 runs | ✅ |
 | Explainability | Grad-CAM++ (correct/FP/FN) | 12 overlays | ✅ qualitative |
 | Reproducibility | seeded + tested | 40 tests, manifests, `make reproduce` | ✅ |
 
 ## 3. Key results (held-out test, n=624; all reproducible)
 - **EfficientNet-B0:** AUC 0.968, sensitivity 0.967, specificity 0.838, F1 0.937;
   best precision/specificity balance of the three models (38 false positives vs 72/77).
-- **Quantization:** static INT8 → **71% smaller, ~8× faster CPU, ~6× less inference RAM**,
-  for a 2.3-point AUC cost; dynamic INT8 keeps accuracy but barely compresses.
-- **Memory:** streaming loader uses **9.4× less RAM** than naïve full-dataset loading.
+- **Quantization:** static INT8 → **70.5% smaller, ~8× faster CPU, ~30× lower inference-time
+  memory increase** (median of 5 isolated runs), for a 2.3-point AUC cost; dynamic INT8 keeps
+  accuracy but barely compresses and gives no memory benefit.
+- **Memory:** streaming loader uses **~10.5× less RAM** than naïve full-dataset loading
+  (medians of 5 runs each; see reports/thesis_final.md §4.4.1 for the measurement-reliability
+  fix behind these numbers).
 - **Data integrity:** automatically detected and removed **26 duplicate images** causing
   train/validation leakage; test set kept canonical.
 

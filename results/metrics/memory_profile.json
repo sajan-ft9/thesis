@@ -1,31 +1,97 @@
 {
   "experiment_name": "efficientnet_b0",
+  "repeats": 5,
   "streaming_vs_naive": {
     "n_train_images": 5216,
     "img_size": 224,
-    "streaming_peak_rss_mb": 335.8,
-    "naive_full_ram_peak_rss_mb": 3140.9,
+    "streaming_peak_rss_mb": 322.4,
+    "streaming_peak_rss_mb_stats": {
+      "median": 322.4,
+      "min": 316.9,
+      "max": 360.8,
+      "n": 5
+    },
+    "streaming_peak_rss_mb_samples": [
+      322.4,
+      316.9,
+      318.1,
+      360.8,
+      324.1
+    ],
+    "naive_full_ram_peak_rss_mb": 3378.1,
+    "naive_full_ram_peak_rss_mb_stats": {
+      "median": 3378.1,
+      "min": 3369.1,
+      "max": 3385.9,
+      "n": 5
+    },
+    "naive_full_ram_peak_rss_mb_samples": [
+      3382.1,
+      3385.9,
+      3378.1,
+      3369.6,
+      3369.1
+    ],
     "naive_nominal_float32_mb": 3140.6,
     "naive_nominal_uint8_mb": 785.2,
-    "reduction_factor": 9.4
+    "reduction_factor": 10.5
   },
   "runtime_memory": {
     "backend": "qnnpack",
     "variants": [
       {
         "variant": "FP32",
-        "model_size_mb": 17.66,
-        "inference_peak_rss_mb": 979.5
+        "model_size_mb": 17.67,
+        "inference_peak_rss_mb": 1156.1,
+        "inference_peak_rss_mb_stats": {
+          "median": 1156.1,
+          "min": 1150.8,
+          "max": 1171.2,
+          "n": 5
+        },
+        "inference_peak_rss_mb_samples": [
+          1156.1,
+          1160.2,
+          1171.2,
+          1150.8,
+          1154.4
+        ]
       },
       {
         "variant": "INT8 dynamic",
-        "model_size_mb": 16.68,
-        "inference_peak_rss_mb": 351.1
+        "model_size_mb": 16.69,
+        "inference_peak_rss_mb": 1165.7,
+        "inference_peak_rss_mb_stats": {
+          "median": 1165.7,
+          "min": 1152.3,
+          "max": 1169.8,
+          "n": 5
+        },
+        "inference_peak_rss_mb_samples": [
+          1165.7,
+          1152.3,
+          1169.8,
+          1155.1,
+          1165.8
+        ]
       },
       {
         "variant": "INT8 static (PTQ)",
-        "model_size_mb": 5.13,
-        "inference_peak_rss_mb": 164.4
+        "model_size_mb": 5.23,
+        "inference_peak_rss_mb": 39.2,
+        "inference_peak_rss_mb_stats": {
+          "median": 39.2,
+          "min": 30.7,
+          "max": 47.6,
+          "n": 5
+        },
+        "inference_peak_rss_mb_samples": [
+          39.2,
+          45.8,
+          35.6,
+          30.7,
+          47.6
+        ]
       }
     ]
   }

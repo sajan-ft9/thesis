@@ -1,0 +1,176 @@
+% =============================================================================
+% Brief progress summary for supervisor review.
+% Self-contained: compiles standalone (pdflatex supervisor_summary.tex), no
+% external figure/bib dependencies. Numbers are taken verbatim from
+% results/metrics/*.json and cross-checked by scripts/verify_thesis_numbers.py
+% (31/31 pass at time of writing). Full write-up: reports/thesis_final.md.
+% =============================================================================
+\documentclass[11pt]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{titlesec}
+
+\titleformat{\section}{\large\bfseries}{\thesection}{0.6em}{}
+\titleformat{\subsection}{\bfseries}{\thesubsection}{0.6em}{}
+
+\title{\vspace{-1em}Memory-Efficient, Explainable Pneumonia Detection\\
+\large Progress Summary for Supervisor Review}
+\author{Sajan Khadka}
+\date{\today}
+
+\begin{document}
+\maketitle
+\vspace{-2em}
+
+\section*{Research Question}
+Can a lightweight convolutional network for pneumonia screening from chest
+X-rays be trained, compressed, and evaluated in a way that is
+\emph{deployment-honest} --- i.e.\ with leakage-checked data, correctly
+measured memory footprint, statistically justified model selection, and
+every reported number traceable to a reproducible artifact --- rather than
+optimizing a single headline accuracy figure? The architectural contribution
+is intentionally modest; the methodological contribution (evaluation
+rigor, quantization behavior, and reproducibility tooling) is the core of
+the thesis.
+
+\section*{Method}
+\begin{enumerate}[leftmargin=1.4em]
+  \item \textbf{Data integrity.} Automated duplicate and train/validation
+        leakage detection on the Kermany pediatric chest X-ray dataset
+        (5{,}216 train / 624 held-out test images) removed 26 duplicate
+        images and fixed 9 leaked train--validation pairs prior to training.
+  \item \textbf{Model comparison.} Three backbones (EfficientNet-B0,
+        ResNet-18, MobileNetV3-Small) trained under an identical protocol
+        for a fair head-to-head comparison.
+  \item \textbf{Pre-registered model selection.} EfficientNet-B0 was
+        selected using a multi-objective criterion fixed in advance
+        (\S3.9 of the full thesis) --- calibration error and false-positive
+        rate at a fixed operating point --- rather than by post-hoc AUC
+        ranking, since MobileNetV3-Small has marginally higher AUC but
+        substantially worse calibration and false-positive count.
+  \item \textbf{Post-training INT8 quantization.} Dynamic and static
+        quantization compared; per-tensor weight quantization was found to
+        collapse the model (AUC $\approx 0.40$), while per-channel
+        quantization preserves performance.
+  \item \textbf{Explainability.} Grad-CAM++ heatmaps generated for correct,
+        false-positive, and false-negative predictions (qualitative only;
+        not clinically validated).
+  \item \textbf{External validation probe.} Zero-shot evaluation on the
+        RSNA Pneumonia Detection Challenge dataset (adult patients, $n=12{,}024$)
+        as an exploratory domain-shift check.
+  \item \textbf{Statistical apparatus.} Bootstrap 95\% confidence intervals
+        (1{,}000 resamples), DeLong test for AUC comparison, McNemar test
+        for paired error comparison, and calibration metrics (ECE, Brier
+        score, calibration slope/intercept).
+  \item \textbf{Reproducibility.} \texttt{make reproduce} runs the full
+        pipeline end-to-end; \texttt{scripts/verify\_thesis\_numbers.py}
+        asserts every number in the final report matches
+        \texttt{results/metrics/*.json} verbatim (currently 31/31 pass).
+\end{enumerate}
+
+\section*{Key Results}
+
+\begin{table}[h]
+\centering
+\caption{Model comparison on the held-out Kermany test set ($n=624$)}
+\begin{tabular}{lrrrrr}
+\toprule
+Model & Params (M) & AUC & Sensitivity & Specificity & Size (MB) \\
+\midrule
+\textbf{EfficientNet-B0 (selected)} & 4.34 & 0.9678 & 0.9667 & 0.8376 & 17.66 \\
+ResNet-18 & 11.31 & 0.9594 & 0.9923 & 0.6923 & 45.32 \\
+MobileNetV3-Small & 1.08 & 0.9743 & 0.9974 & 0.6709 & 4.44 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\caption{EfficientNet-B0: effect of static INT8 quantization}
+\begin{tabular}{lrrr}
+\toprule
+Metric & FP32 & Static INT8 & Change \\
+\midrule
+Size (MB) & 17.67 & 5.22 & $-70.5\%$ \\
+Mean latency (ms) & 133.4 & 16.3 & $\sim 8\times$ faster \\
+Inference-time RAM increase (MB, median of 5) & 1156.1 & 39.2 & $\sim 30\times$ lower \\
+Test AUC & 0.9678 & 0.9444 & $-2.34$ pts \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent Additional findings: EfficientNet-B0 vs.\ MobileNetV3-Small AUC
+difference is not significant by DeLong's test ($p \approx 0.21$--$0.23$),
+but the two models differ significantly on paired errors (McNemar,
+$p = 0.0015$ / $0.0003$) and calibration (ECE 0.035 vs.\ 0.053--0.056),
+supporting the selection criterion in point 3 above. A lazy streaming data
+pipeline uses $\sim$10.5$\times$ less RAM than naive full-dataset loading
+(322.4~MB vs.\ 3{,}378.1~MB, medians of 5 isolated runs each). Zero-shot
+external validation on RSNA gives
+AUC $= 0.8892$ (95\% CI [0.8825, 0.8954]), interpreted as expected domain
+shift rather than a failure, and driven substantially by a calibration
+shift (ECE 0.035 $\rightarrow$ 0.119).
+
+\section*{Independent Verification}
+Prior to this summary, all headline numbers were re-derived directly from
+the raw JSON result files (not just taken from the written report), and the
+project's own verification script was re-run and confirmed to pass 31/31.
+The automated test suite (9 files, $\sim$40 tests) executes without
+failures. The git history additionally documents three self-corrections: an
+earlier, inflated 5-fold cross-validation figure; an earlier, incorrectly
+measured (\texttt{tracemalloc}-based) memory metric; and, most recently, a
+quantized-model-size and a memory-measurement fix described below ---
+evidence of methodological self-checking rather than post-hoc narrative
+construction.
+
+\section*{Memory-Measurement Reliability (most recent fix)}
+Two issues were found and corrected this cycle. \textbf{(1)} Quantized model
+size was computed by re-serializing the model's state dict in memory rather
+than measuring the file actually saved to disk; for the static-PTQ variant
+(saved as a TorchScript archive) this understated size by $\sim$1.7\%
+(5.13~MB $\to$ 5.22~MB, $-71\% \to -70.5\%$ compression). \textbf{(2)}
+Peak-RSS memory measurement used a background thread polling every 10~ms,
+which can miss a short-lived memory spike between polls --- repeating the
+identical measurement showed swings from 0.2~MB to over 400~MB for the same
+configuration. Replacing this with the OS kernel's own high-water-mark
+counter (\texttt{getrusage().ru\_maxrss}), measuring each variant in a
+fresh isolated process, and reporting the median of 5 runs (full samples
+kept in \texttt{results/metrics/memory\_profile.json}) reduced that spread
+to normal run-to-run noise ($\sim$2$\times$, not $\sim$2000$\times$). This
+raised the reported inference-time memory benefit of static INT8 from
+$\sim6\times$ to $\sim30\times$ --- a genuine, more-reliable measurement of
+a narrower quantity (memory added by inference alone, excluding
+model-build/quantization overhead), not a discretionary re-framing.
+
+\section*{Limitations (acknowledged in the thesis)}
+\begin{itemize}[leftmargin=1.4em]
+  \item Single primary training dataset (pediatric); external validation is
+        a single exploratory zero-shot probe, not a multi-site clinical
+        validation.
+  \item No $k$-fold cross-validation --- single stratified split with
+        bootstrap confidence intervals.
+  \item Efficiency measured via CPU proxy metrics; no physical edge-device
+        (e.g.\ Raspberry Pi) benchmark.
+  \item Grad-CAM++ explanations are qualitative; no radiologist review of
+        localization quality.
+  \item Not evaluated or positioned as a clinical device.
+\end{itemize}
+
+\section*{Assessment}
+The work is internally consistent, its quantitative claims are independently
+traceable to reproducible artifacts, and its limitations are stated rather
+than obscured. The main open question for supervisory discussion is scope:
+whether the single-dataset/single-split design is sufficient for the final
+submission, or whether $k$-fold cross-validation and/or a second full
+external dataset should be added before defense.
+
+\vspace{1em}
+\noindent\textit{Full write-up:} \texttt{reports/thesis\_final.md} \quad
+\textit{Defense reference:} \texttt{reports/THESIS\_HANDBOOK.md} \quad
+\textit{Reproduce all results:} \texttt{make reproduce}
+
+\end{document}

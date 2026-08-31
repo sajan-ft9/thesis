@@ -70,10 +70,11 @@ and validation splits. Among architectures, all three exceed 0.95 AUC, but
 EfficientNet-B0 provides the **best precision/specificity balance** (38 false
 positives versus 72 and 77 for ResNet-18 and MobileNetV3-Small). **Static INT8
 quantization** compresses the model from **17.67 MB to 5.22 MB (−70.5%)**, reduces CPU
-latency ~8× (≈133 ms → ≈16 ms per image), and cuts **peak inference memory ≈6×
-(979.5 → 164.4 MB)** for a 2.34-percentage-point AUC cost, whereas **dynamic INT8**
-preserves accuracy but compresses by only ~6%. The lazy streaming data pipeline uses
-**9.4× less RAM** than naïve full-dataset loading (335.8 MB vs 3,140.9 MB). In an
+latency ~8× (≈133 ms → ≈16 ms per image), and cuts **inference-time memory increase
+≈30× (1156.1 → 39.2 MB)** for a 2.34-percentage-point AUC cost, whereas **dynamic
+INT8** preserves accuracy but compresses by only ~6% and gives no inference-time
+memory benefit. The lazy streaming data pipeline uses **≈10.5× less RAM** than naïve
+full-dataset loading (322.4 MB vs 3,378.1 MB, medians over 5 runs each). In an
 exploratory zero-shot test on the independent **RSNA** dataset (adult), the model retains a
 ROC-AUC of **0.889** — a modest, expected drop under domain shift, providing initial
 evidence of external generalization.
@@ -216,9 +217,10 @@ independently useful contributions:
    including the practical finding that **per-channel** (not per-tensor) weight
    quantization is required to keep EfficientNet-B0 from collapsing (§4.3).
 5. **Deployment-efficiency contribution.** A correct efficiency methodology — on-disk
-   size, warm-up-corrected latency, throughput, and **sampled peak memory (RSS, not
-   `tracemalloc`)** — quantifying a 71% smaller, ~6× lower-memory, ~8× faster model and a
-   9.4× lower-RAM data pipeline (§4.4).
+   size, warm-up-corrected latency, throughput, and **kernel high-water-mark peak
+   memory (RSS, not `tracemalloc`), median of 5 isolated runs per measurement** —
+   quantifying a 70.5% smaller, ~8× faster model with a ~30× lower inference-time
+   memory increase, and a ~10.5× lower-RAM data pipeline (§4.4).
 
 Together these support a fair three-architecture comparison (EfficientNet-B0 vs.
 ResNet-18 vs. MobileNetV3-Small) under an identical pipeline, and frame the work as a
@@ -677,35 +679,56 @@ comfortably meeting the target — precisely the deployment motivation for quant
 
 Because memory — not raw compute — is typically the binding constraint on
 resource-constrained hardware, we measure peak process resident-set size (RSS)
-directly with psutil sampling (never `tracemalloc`, which tracks only Python-level
-allocations and would report misleading sub-megabyte values). Two measurements
-substantiate the memory-efficiency contribution.
+(never `tracemalloc`, which tracks only Python-level allocations and would report
+misleading sub-megabyte values). Two measurements substantiate the memory-efficiency
+contribution.
+
+**Measurement-reliability correction.** An earlier version of this analysis sampled
+RSS from a background thread polling every 10 ms. Repeating that measurement revealed
+it can miss a short-lived memory spike that falls between polls: the same
+configuration, measured twice, swung from 0.2 MB to over 400 MB. The current numbers
+instead read the operating system's own high-water-mark counter
+(`getrusage().ru_maxrss`), which the kernel updates directly and cannot miss a spike,
+with each scenario measured 5 times in a fresh, isolated process and reported as a
+median with its full range — never a single, possibly-lucky sample. All raw samples
+are retained in `results/metrics/memory_profile.json`.
 
 **(a) Streaming vs. naïve loading.** Iterating the lazy, path-based DataLoader for one
-pass over the training set peaks at **335.8 MB**, whereas pre-loading the same 5,216
-images into a single in-RAM float32 tensor (the common non-streaming pattern) peaks at
-**3,140.9 MB** — a **9.4× reduction**. The naïve figure matches the nominal tensor
-size (3,140.6 MB), validating the measurement. This lazy pipeline is the core enabler
-of operation on low-memory hardware.
+pass over the training set peaks at a median **322.4 MB** (range 316.9–360.8 MB across
+5 runs), whereas pre-loading the same 5,216 images into a single in-RAM float32 tensor
+(the common non-streaming pattern) peaks at a median **3,378.1 MB** (range
+3,369.1–3,385.9 MB) — a **10.5× reduction**. The naïve figure is close to the nominal
+tensor size (3,140.6 MB), as expected. This lazy pipeline is the core enabler of
+operation on low-memory hardware.
 
-**(b) Runtime memory by precision.** Peak RSS during a full test-set inference pass,
-measured identically per variant:
+**(b) Runtime memory by precision.** Each variant is built in its own fresh process,
+and the RSS high-water mark is read once right after that build/quantization step
+(the baseline) and once more after a full test-set inference pass; the reported number
+is the median inference-only *increase* over 5 such runs — i.e. the memory the
+inference pass itself adds, excluding the cost of loading/quantizing the model:
 
-| Variant | Model weights (MB) | Peak inference RSS (MB) |
-|---|---|---|
-| FP32 | 17.66 | 979.5 |
-| INT8 dynamic | 16.68 | 351.1 |
-| **INT8 static (PTQ)** | **5.13** | **164.4** |
+| Variant | Model weights (MB) | Median inference RSS increase (MB) | Range (5 runs) |
+|---|---|---|---|
+| FP32 | 17.67 | 1156.1 | 1150.8–1171.2 |
+| INT8 dynamic | 16.69 | 1165.7 | 1152.3–1169.8 |
+| **INT8 static (PTQ)** | **5.23** | **39.2** | 30.7–47.6 |
 
 *Table 4.8: Model and runtime memory by precision (EfficientNet-B0, CPU). See
 `results/figures/memory_footprint.png`.*
 
-**Static INT8 quantization reduces not only the stored model (3.4×) but the peak
-inference memory by ≈6× (979.5 → 164.4 MB)**, because activations as well as weights
-are represented in INT8; dynamic INT8 (linear-only) gives an intermediate runtime
-footprint with negligible storage savings. Combined with the streaming loader, the
-deployed static-INT8 configuration operates within a small, predictable memory budget
-appropriate for resource-constrained healthcare settings.
+**Static INT8 quantization reduces not only the stored model (3.4×) but the
+inference-time memory increase by ≈30× (1156.1 → 39.2 MB)**, because activations as
+well as weights are represented in INT8, so the inference pass itself allocates far
+less; dynamic INT8 (linear-only) shows essentially **no** inference-time memory
+benefit (1156.1 → 1165.7 MB), consistent with it quantizing only the linear head while
+the convolutional activations — the bulk of runtime memory traffic — stay FP32.
+Combined with the streaming loader, the deployed static-INT8 configuration operates
+within a small, predictable memory budget appropriate for resource-constrained
+healthcare settings. (Note: this ≈30× figure measures a narrower quantity — the
+inference-pass-only increment — than the ≈6× figure reported in an earlier version of
+this thesis, which included some model-construction overhead in its baseline; both are
+internally consistent with their own definitions, but are not directly comparable to
+each other.)
 
 ### 4.5 Explainability
 
@@ -815,8 +838,9 @@ to an independent dataset; rigorous external and clinical validation remain futu
 >    keeps discrimination (AUC −2.3 pt) while the fixed-threshold operating point moves;
 >    per-channel quantization is required (per-tensor collapses).
 > 3. **Memory is the deployment bottleneck that is actually solved.** Static INT8 →
->    5.13 MB and ≈164 MB inference RAM; the streaming loader uses 9.4× less RAM than naïve
->    loading. The accuracy–efficiency frontier is plotted in
+>    5.22 MB and a ≈39 MB inference-time memory increase (median of 5 isolated runs);
+>    the streaming loader uses ≈10.5× less RAM than naïve loading. The
+>    accuracy–efficiency frontier is plotted in
 >    `results/figures/accuracy_efficiency_tradeoff.png`.
 > 4. **External generalisation is partial and calibration-limited.** On RSNA, sensitivity
 >    transfers (0.955) but specificity and calibration degrade under domain shift —
@@ -903,8 +927,9 @@ Pulling the results together, four comparisons frame what was actually achieved:
    are in the operating point — EfficientNet-B0 halves the false positives of either baseline
    (38 vs 72/77) and is the **best-calibrated** model (ECE 0.035 vs 0.053–0.056). Conclusion:
    for screening, calibration and specificity, not a fractional AUC, should drive the choice.
-2. **Cross-precision (FP32 → INT8).** Dynamic INT8 is "free" but barely compresses (~6%);
-   static INT8 is the deployment lever (−71% size, ~6× less RAM, ~8× faster) at a 2.3-point
+2. **Cross-precision (FP32 → INT8).** Dynamic INT8 is "free" but barely compresses (~6%)
+   and gives no inference-time memory benefit; static INT8 is the deployment lever
+   (−70.5% size, ~30× lower inference-time memory increase, ~8× faster) at a 2.3-point
    AUC cost. The fixed-threshold specificity collapse (0.84→0.50) with near-unchanged AUC
    shows the cost is **re-calibratable**, not lost separability.
 3. **Cross-dataset (internal → external).** Generalisation to RSNA is reasonable on
@@ -941,9 +966,9 @@ evaluated with deliberate measurement rigour. On the held-out Kermany test set t
 model achieves **ROC-AUC 0.9678 (95% CI 0.9504–0.9816)**, **sensitivity 0.9667**, and
 the best precision/specificity balance among three architectures trained under an
 identical pipeline. **Static INT8 quantization** produces a **5.22 MB (−70.5%) model with
-~8× faster CPU inference and ≈6× lower peak inference memory (979.5 → 164.4 MB)** for a
-2.3-point AUC cost; together with a lazy streaming data pipeline that uses **9.4× less
-RAM** than naïve full-dataset loading, the system operates within a small, predictable
+~8× faster CPU inference and ≈30× lower inference-time memory increase (1156.1 → 39.2
+MB)** for a 2.3-point AUC cost; together with a lazy streaming data pipeline that uses
+**≈10.5× less RAM** than naïve full-dataset loading, the system operates within a small, predictable
 memory budget. An exploratory zero-shot test on the independent **RSNA** dataset
 (AUC 0.889) gives initial evidence of external generalization under domain shift.
 **Grad-CAM++** provides prediction-level visual explanations. Crucially,

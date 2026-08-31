@@ -22,6 +22,8 @@ from __future__ import annotations
 
 import argparse
 import io
+import resource
+import sys
 import threading
 import time
 from collections.abc import Callable
@@ -45,6 +47,8 @@ __all__ = [
     "benchmark_latency",
     "benchmark_throughput",
     "benchmark_peak_rss",
+    "peak_rss_mb",
+    "measure_rss_delta",
     "benchmark_model",
     "LatencyResult",
 ]
@@ -154,6 +158,33 @@ def benchmark_peak_rss(fn: Callable[[], Any], poll_interval: float = 0.01) -> tu
         thread.join()
     peak = max(peak, process.memory_info().rss)
     return result, (peak - baseline) / 1e6
+
+
+def peak_rss_mb() -> float:
+    """This process's peak (high-water-mark) RSS so far, in MB.
+
+    Uses ``getrusage().ru_maxrss`` -- a count the kernel updates directly,
+    not a periodic sample -- so it cannot miss a transient spike between
+    polls the way :func:`benchmark_peak_rss`'s background-thread sampler
+    can. ``ru_maxrss`` is bytes on macOS, kibibytes on Linux.
+    """
+    ru = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    return ru / 1e6 if sys.platform == "darwin" else ru / 1e3
+
+
+def measure_rss_delta(fn: Callable[[], Any]) -> tuple[Any, float]:
+    """Run ``fn`` and return ``(result, high-water-mark RSS increase in MB)``.
+
+    Unlike :func:`benchmark_peak_rss`, this never misses a spike -- but
+    because the high-water mark is cumulative for the whole process, it only
+    detects growth *beyond* whatever the peak already was when this function
+    was called. Call it in a fresh, single-purpose process (or subprocess)
+    immediately before ``fn`` for a clean, uncontaminated baseline.
+    """
+    before = peak_rss_mb()
+    result = fn()
+    after = peak_rss_mb()
+    return result, max(after - before, 0.0)
 
 
 def benchmark_model(
