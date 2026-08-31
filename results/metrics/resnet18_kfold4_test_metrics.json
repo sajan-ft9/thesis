@@ -1,0 +1,58 @@
+{
+  "experiment_name": "resnet18_kfold4",
+  "checkpoint": "models/resnet18_kfold4_best.pth",
+  "n_test": 624,
+  "metrics": {
+    "accuracy": 0.8974358974358975,
+    "precision": 0.8654708520179372,
+    "recall": 0.9897435897435898,
+    "sensitivity": 0.9897435897435898,
+    "specificity": 0.7435897435897436,
+    "f1": 0.9234449760765551,
+    "auc": 0.9595989480604865,
+    "tp": 386,
+    "tn": 174,
+    "fp": 60,
+    "fn": 4,
+    "threshold": 0.5,
+    "n": 624
+  },
+  "confidence_intervals": {
+    "accuracy": {
+      "point": 0.8974358974358975,
+      "low": 0.875,
+      "high": 0.9183092948717948
+    },
+    "auc": {
+      "point": 0.9595989480604865,
+      "low": 0.9374178484998357,
+      "high": 0.9762210916073699
+    },
+    "n_boot": 1000,
+    "alpha": 0.05
+  },
+  "youden_threshold": {
+    "threshold": 0.96491539478302,
+    "sensitivity": 0.9282051282051282,
+    "specificity": 0.9188034188034188,
+    "youden_j": 0.847008547008547
+  },
+  "n_errors": 64,
+  "n_false_positive": 60,
+  "n_false_negative": 4,
+  "figures": {
+    "confusion_matrix": {
+      "png": "results/confusion_matrices/resnet18_kfold4_confusion_matrix.png",
+      "pdf": "results/confusion_matrices/resnet18_kfold4_confusion_matrix.pdf"
+    },
+    "roc_curve": {
+      "png": "results/roc_curves/resnet18_kfold4_roc_curve.png",
+      "pdf": "results/roc_curves/resnet18_kfold4_roc_curve.pdf"
+    },
+    "pr_curve": {
+      "png": "results/figures/resnet18_kfold4_pr_curve.png",
+      "pdf": "results/figures/resnet18_kfold4_pr_curve.pdf"
+    }
+  },
+  "error_cases_csv": "results/metrics/resnet18_kfold4_error_cases.csv"
+}

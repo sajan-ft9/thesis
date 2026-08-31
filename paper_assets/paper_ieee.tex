@@ -154,11 +154,13 @@ the operating point a deployment parameter.
 
 \section{Limitations and Future Work}
 Single (pediatric, single-institution) dataset; no clinical-reader or
-on-device-hardware validation (none simulated); class imbalance. The primary result is
-corroborated by 5-fold cross-validation (mean AUC 0.971, std 0.006, each fold evaluated
-on the same held-out test set), but this was not repeated for the baseline
-architectures, and fold assignment is image-level rather than confirmed patient-level.
-Future work: external
+on-device-hardware validation (none simulated); class imbalance. All three models are
+corroborated by 5-fold cross-validation (mean AUC 0.971$\pm$0.006 EfficientNet-B0,
+0.961$\pm$0.008 ResNet-18, 0.970$\pm$0.016 MobileNetV3-Small; each fold evaluated on the
+same held-out test set) -- notably, MobileNetV3-Small's single-split AUC edge over
+EfficientNet-B0 is not stable under CV (2.8$\times$ larger fold-to-fold std), reinforcing
+\S IV's calibration-based model selection. Fold assignment is image-level rather than
+confirmed patient-level, and only one CV seed was used. Future work: external
 validation (NIH ChestX-ray14, CheXpert), quantization-aware training to close the PTQ
 gap, on-device (Raspberry Pi / Jetson) benchmarking, and quantitative explanation
 evaluation against bounding boxes (e.g., RSNA).

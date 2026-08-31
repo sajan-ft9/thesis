@@ -3,7 +3,7 @@
 % Self-contained: compiles standalone (pdflatex supervisor_summary.tex), no
 % external figure/bib dependencies. Numbers are taken verbatim from
 % results/metrics/*.json and cross-checked by scripts/verify_thesis_numbers.py
-% (41/41 pass at time of writing). Full write-up: reports/thesis_final.md.
+% (45/45 pass at time of writing). Full write-up: reports/thesis_final.md.
 % =============================================================================
 \documentclass[11pt]{article}
 \usepackage[margin=2.5cm]{geometry}
@@ -69,7 +69,7 @@ the thesis.
   \item \textbf{Reproducibility.} \texttt{make reproduce} runs the full
         pipeline end-to-end; \texttt{scripts/verify\_thesis\_numbers.py}
         asserts every number in the final report matches
-        \texttt{results/metrics/*.json} verbatim (currently 41/41 pass).
+        \texttt{results/metrics/*.json} verbatim (currently 45/45 pass).
 \end{enumerate}
 
 \section*{Key Results}
@@ -118,7 +118,7 @@ shift (ECE 0.035 $\rightarrow$ 0.119).
 \section*{Independent Verification}
 Prior to this summary, all headline numbers were re-derived directly from
 the raw JSON result files (not just taken from the written report), and the
-project's own verification script was re-run and confirmed to pass 41/41.
+project's own verification script was re-run and confirmed to pass 45/45.
 The automated test suite (9 files, $\sim$40 tests) executes without
 failures. The git history additionally documents three self-corrections: an
 earlier, inflated 5-fold cross-validation figure; an earlier, incorrectly
@@ -174,20 +174,45 @@ number is not a lucky split. Specificity is the most fold-sensitive metric
 (range [0.70, 0.87]); the lowest-specificity fold's own AUC (0.9724) is
 still among the best of the five, indicating a threshold-calibration effect
 rather than a loss of discrimination -- consistent with the same pattern
-already observed for static-INT8 quantization. This was done only for the
-primary model (not the two baselines), and fold assignment was image-level,
-not patient-level (patient identifiers are not reliably recoverable from
-the dataset's filenames) -- both are stated as remaining limitations below,
-not silently resolved.
+already observed for static-INT8 quantization.
+
+\subsection*{Extended to both baselines}
+The same 5-fold protocol was then run for ResNet-18 and MobileNetV3-Small too,
+directly strengthening the model-selection case in the Method section above:
+
+\begin{table}[h]
+\centering
+\caption{5-fold cross-validated AUC, all three architectures}
+\begin{tabular}{lrrrr}
+\toprule
+Model & Single-split AUC & 5-fold mean AUC & Std & Range \\
+\midrule
+\textbf{EfficientNet-B0} & 0.9678 & \textbf{0.9707} & \textbf{0.0057} & [0.9623, 0.9796] \\
+ResNet-18 & 0.9594 & 0.9608 & 0.0084 & [0.9467, 0.9730] \\
+MobileNetV3-Small & 0.9743 & 0.9700 & 0.0159 & [0.9393, 0.9827] \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent Under a single split, MobileNetV3-Small's AUC edges out
+EfficientNet-B0 by 0.0065 -- the gap the DeLong test already showed was not
+significant. Under cross-validation that ordering flips (0.9700 vs 0.9707),
+and MobileNetV3-Small's fold-to-fold std is \textbf{2.8x} EfficientNet-B0's
+-- direct evidence its single-split AUC edge is not a stable property of
+the model, on top of the existing calibration/false-positive-rate argument
+for choosing EfficientNet-B0.
+
+Fold assignment was image-level, not patient-level (patient identifiers are
+not reliably recoverable from the dataset's filenames), and only one CV
+seed was used -- stated as remaining limitations, not silently resolved.
 
 \section*{Limitations (acknowledged in the thesis)}
 \begin{itemize}[leftmargin=1.4em]
   \item Single primary training dataset (pediatric); external validation is
         a single exploratory zero-shot probe, not a multi-site clinical
         validation.
-  \item 5-fold CV was run for the primary model only, not the two baseline
-        architectures; fold assignment is image-level, not verified
-        patient-level.
+  \item 5-fold CV fold assignment is image-level, not verified
+        patient-level; only one CV seed was used.
   \item Efficiency measured via CPU proxy metrics; no physical edge-device
         (e.g.\ Raspberry Pi) benchmark.
   \item Grad-CAM++ explanations are qualitative; no radiologist review of
@@ -199,13 +224,14 @@ not silently resolved.
 The work is internally consistent, its quantitative claims are independently
 traceable to reproducible artifacts, and its limitations are stated rather
 than obscured. The single-split-vs-lucky-split question raised in the
-previous version of this summary has been directly addressed by the 5-fold
-result above. The main open question for supervisory discussion is now
-narrower: whether extending cross-validation to the two baseline
-architectures and/or adding a second full external dataset is warranted
-before the final submission, or whether the current single-model CV result
-and single exploratory external probe are sufficient scope for a Master's
-thesis.
+previous version of this summary has been directly addressed for all three
+models, and the resulting cross-validation variance data \emph{adds to},
+rather than merely repeats, the existing statistical case for the
+EfficientNet-B0 selection. The main open question for supervisory discussion
+is now narrower: whether a second full external dataset and/or a
+multi-seed x multi-fold study is warranted before the final submission, or
+whether the current scope (three-model single-CV-seed comparison plus one
+exploratory external probe) is sufficient for a Master's thesis.
 
 \vspace{1em}
 \noindent\textit{Full write-up:} \texttt{reports/thesis\_final.md} \quad

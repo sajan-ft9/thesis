@@ -27,10 +27,14 @@ Additional methodological notes:
 - The official Kermany validation split (16 images) is too small for model
   selection; a stratified split carved from the training set is used instead, with
   the official test set held out untouched.
-- The primary model's single-split result is corroborated by 5-fold cross-validation
-  (5 independent retrains, each evaluated on the same held-out test set): mean AUC
-  0.9707 (std 0.0057), within 0.003 of the single-split AUC (0.9678). This was not
-  done for the two baseline architectures, and patient-level grouping across folds
-  was not verified (see item 1).
+- All three models' single-split results are corroborated by 5-fold cross-validation
+  (5 independent retrains each, every fold evaluated on the same held-out test set):
+  mean AUC 0.9707±0.0057 (EfficientNet-B0), 0.9608±0.0084 (ResNet-18), 0.9700±0.0159
+  (MobileNetV3-Small) — all within ~0.01 of their single-split AUC. Notably,
+  MobileNetV3-Small's fold-to-fold AUC standard deviation is 2.8x EfficientNet-B0's,
+  adding evidence (beyond §4.2.1's significance tests) that its single-split AUC
+  advantage is not a stable property of the model. Patient-level grouping across folds
+  was not verified (fold assignment is image-level; see item 1) and only a single CV
+  seed (5-fold, seed 42) was used — a multi-seed x multi-fold study remains future work.
 - Static INT8 quantization is backend-dependent; if unsupported on the host, the
   pipeline reports this rather than substituting estimated numbers.

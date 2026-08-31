@@ -34,7 +34,7 @@ Most AI research chases the highest possible accuracy with the biggest possible 
 4. **Shrink it (quantization).** The winning model is compressed using INT8 quantization — storing its internal numbers with less precision, the way a photo can be saved at lower resolution. Done carelessly, this technique can break the model entirely; the thesis documents exactly how much precision can be sacrificed before that happens.
 5. **Make it explain itself.** Grad-CAM++ generates a heatmap overlay on each X-ray showing which pixels most influenced the model's decision — including on cases where the model was *wrong*, which is often more informative than the cases where it was right.
 6. **Test it on a different hospital's data.** To see whether the model generalizes beyond its training population, it's also run — without any retraining — on a second, independent dataset (RSNA, adult patients) as a stress test.
-7. **Retrain it 5 times to be sure.** The chosen model is retrained from scratch on 5 different slices of the training data and tested each time on the same untouched test set, so the headline result can't be dismissed as one lucky split.
+7. **Retrain everything 5 times to be sure.** All three models — not just the chosen one — are retrained from scratch on 5 different slices of the training data and tested each time on the same untouched test set, so the headline result can't be dismissed as one lucky split, and neither can the runner-up's.
 8. **Grade its own homework.** A verification script re-derives every headline number in the write-up straight from the raw result files and fails loudly if even one doesn't match — which is the mechanism behind the "no fabricated numbers" claim below.
 
 ## 4. What did they actually find?
@@ -74,7 +74,7 @@ Even the memory numbers above were caught mid-correction: a first attempt at mea
 ## 6. What this thesis does *not* claim
 
 - **One primary dataset.** The main model is trained on a single pediatric X-ray collection; the second dataset is used only as a quick, exploratory stress test, not a full clinical validation.
-- **Cross-validation covers the main model only.** The primary model was retrained 5 separate times on different data splits (5-fold cross-validation) to check the headline result wasn't a lucky split — it wasn't (mean AUC 0.9707, almost identical to the original 0.9678). This wasn't repeated for the two comparison models, and the 5 splits were done image-by-image rather than confirmed patient-by-patient (so if the same patient appears in more than one image, they could in principle land in both the training and held-out portion of a fold) — both are stated as open limitations, not claimed as solved.
+- **Cross-validation splits are image-level, not patient-level.** All three models were retrained 5 separate times on different data splits (5-fold cross-validation) to check the headline results weren't a lucky split — they weren't. But the 5 splits were done image-by-image rather than confirmed patient-by-patient, so if the same patient appears in more than one image, they could in principle land in both the training and held-out portion of a fold. Also, only one way of splitting into 5 folds was tried (a different random split could give slightly different numbers) — both are stated as open limitations, not claimed as solved.
 - **CPU numbers are a proxy.** Efficiency is measured on a standard laptop CPU, not on an actual low-power edge device like a Raspberry Pi.
 - **Heatmaps are shown, not graded.** No radiologist reviewed whether the Grad-CAM++ heatmaps point at clinically meaningful regions — that's a qualitative illustration, not a validated diagnostic aid.
 - **Not a medical device.** The thesis is explicit about this itself: this is a research prototype, not something cleared for clinical use.
@@ -92,7 +92,7 @@ A little — the fully-shrunk version loses about 2 accuracy points — but it b
 An automated script recomputes every reported number from the raw output files and fails if any of them don't match — it's not a manual promise, it's enforced by code.
 
 **"Couldn't the good result just be a lucky train/test split?"**
-Checked directly: the model was retrained from scratch 5 separate times on 5 different slices of the training data (5-fold cross-validation), and every version was tested on the same untouched test set. The average result (96.7% AUC) landed almost exactly on the original single-run result (96.8%) — so no, it wasn't a fluke.
+Checked directly, for all three models: each was retrained from scratch 5 separate times on 5 different slices of the training data (5-fold cross-validation), and every version was tested on the same untouched test set. The chosen model's average result (96.7% AUC) landed almost exactly on its original single-run result (96.8%) — not a fluke. As a bonus, this check also revealed that the model with the slightly *higher* single-run score (MobileNetV3-Small, 97.4%) was actually the least consistent of the three across the 5 retrains — more evidence the chosen model was the right pick, not just the AUC leaderboard winner.
 
 **"Would this work in a real hospital?"**
 Not yet, and the thesis says so directly — it's evaluated on one main dataset with one exploratory cross-hospital check, not a clinical trial.
@@ -102,4 +102,4 @@ The contribution is the evaluation discipline: fair head-to-head comparison, pre
 
 ---
 
-**Where to look in the repo** — full write-up: `reports/thesis_final.md` · defense reference: `reports/THESIS_HANDBOOK.md` · rebuild everything from scratch: `make reproduce` · check every number: `python scripts/verify_thesis_numbers.py` · re-run the 5-fold cross-validation: `python scripts/run_kfold_cv.py --folds 5`.
+**Where to look in the repo** — full write-up: `reports/thesis_final.md` · defense reference: `reports/THESIS_HANDBOOK.md` · rebuild everything from scratch: `make reproduce` · check every number: `python scripts/verify_thesis_numbers.py` · re-run the 5-fold cross-validation: `python scripts/run_kfold_cv.py --config configs/<model>.yaml --folds 5`.

@@ -530,9 +530,9 @@ five folds). This is consistent with the thesis's broader finding that specifici
 fixed threshold is more calibration-sensitive than AUC across training runs, model
 precisions, and now training splits — reinforcing that a fixed 0.5 threshold, not the
 model's discrimination ability, is the source of specificity variability. This addresses
-the "no k-fold cross-validation" item previously listed as a limitation (§6.2); a full
-multi-seed **and** multi-fold study, and repeating this for the two baseline
-architectures, remain future work.
+the "no k-fold cross-validation" item previously listed as a limitation (§6.2); the same
+5-fold protocol was subsequently run for both baseline architectures too (§4.2.3). A full
+multi-seed **and** multi-fold study (varying both simultaneously) remains future work.
 
 ### 4.2 Model Comparison (Baselines)
 
@@ -638,6 +638,36 @@ specificity and F1 were swept across decision thresholds 0.1–0.9 (Fig.
 across the entire range while specificity rises smoothly from 0.65 (t = 0.1) to 0.90
 (t = 0.9) — the model is **robust to threshold choice**, not balanced on a knife-edge, and
 the sensitivity/specificity trade-off is a smooth, predictable deployment knob.*
+
+#### 4.2.3 Cross-Validated Model Comparison
+
+§4.1.2 cross-validated the primary model alone. To check whether the single-split AUC
+*ranking between models* (§4.2.1) also holds up, all three architectures were retrained
+on the same 5 stratified folds and evaluated on the same held-out test set each time:
+
+| Model | Single-split AUC | 5-fold mean AUC | Std | Range |
+|---|---|---|---|---|
+| **EfficientNet-B0** | 0.9678 | **0.9707** | **0.0057** | [0.9623, 0.9796] |
+| ResNet-18 | 0.9594 | 0.9608 | 0.0084 | [0.9467, 0.9730] |
+| MobileNetV3-Small | 0.9743 | 0.9700 | 0.0159 | [0.9393, 0.9827] |
+
+*Table 4.5b: 5-fold cross-validated AUC per model. Full per-fold results in
+`results/metrics/{efficientnet_b0,resnet18,mobilenetv3_small}_kfold.json`.*
+
+This adds a second, independent line of evidence for the model-selection decision in
+§4.2.1. Under a single split, MobileNetV3-Small's AUC (0.9743) edges out EfficientNet-B0
+(0.9678) by 0.0065 — the gap §4.2.1 already showed was not statistically significant.
+Under cross-validation, that ordering is **not stable**: MobileNetV3-Small's mean AUC
+(0.9700) is now marginally *below* EfficientNet-B0's (0.9707), and its **fold-to-fold
+standard deviation is 2.8× larger** (0.0159 vs 0.0057) — one MobileNetV3-Small fold
+scores as low as 0.9393, a spread none of EfficientNet-B0's folds approach. Specificity
+is similarly more volatile for MobileNetV3-Small (range [0.70, 0.84], std 0.048) than for
+EfficientNet-B0 (§4.1.2). ResNet-18 sits in between on both counts. This is consistent
+with, and strengthens, §4.2.1's statistical case: not only is EfficientNet-B0's
+single-split AUC deficit against MobileNetV3-Small not significant, MobileNetV3-Small's
+own AUC is the least reproducible of the three across different training splits —
+another reason, beyond calibration and false-positive rate, to prefer EfficientNet-B0 as
+the deployment candidate.
 
 ### 4.3 Quantization Results
 

@@ -90,15 +90,24 @@ def main() -> int:
             ("primary specificity CI low", f"{cis['specificity']['low']:.4f}"),
         ]
 
-    # 5-fold cross-validation — only if that experiment has been run.
-    kfold_path = METRICS / "efficientnet_b0_kfold.json"
-    if kfold_path.exists():
+    # 5-fold cross-validation — only for models where that experiment has been run.
+    # Full metric panel for the primary model (§4.1.2); the two baselines are only
+    # discussed on AUC in the thesis (§4.2.3's cross-model stability comparison).
+    kfold_metric_names = {
+        "efficientnet_b0": ("auc", "accuracy", "sensitivity", "specificity", "f1"),
+        "resnet18": ("auc",),
+        "mobilenetv3_small": ("auc",),
+    }
+    for model_name, metric_names in kfold_metric_names.items():
+        kfold_path = METRICS / f"{model_name}_kfold.json"
+        if not kfold_path.exists():
+            continue
         k = json.loads(kfold_path.read_text(encoding="utf-8"))
-        for name in ("auc", "accuracy", "sensitivity", "specificity", "f1"):
+        for name in metric_names:
             agg = k["test_metric_summary"][name]
             checks += [
-                (f"kfold {name} mean", f"{agg['mean']:.4f}"),
-                (f"kfold {name} std", f"{agg['std']:.4f}"),
+                (f"{model_name} kfold {name} mean", f"{agg['mean']:.4f}"),
+                (f"{model_name} kfold {name} std", f"{agg['std']:.4f}"),
             ]
 
     failures = []
