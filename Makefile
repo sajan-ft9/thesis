@@ -70,6 +70,9 @@ tradeoff:  ## Plot the accuracy-efficiency trade-off (deployment frontier) figur
 verify-numbers:  ## Check thesis_final.md headline numbers match results/metrics/*.json
 	$(PYTHON) scripts/verify_thesis_numbers.py
 
+kfold:  ## 5-fold CV on the primary model, each fold evaluated on the held-out test set (~2-3h; not part of `reproduce`)
+	$(PYTHON) scripts/run_kfold_cv.py --config $(PRIMARY) --folds 5
+
 external-rsna:  ## Exploratory zero-shot external validation on RSNA (download + inference only)
 	$(PYTHON) scripts/fetch_rsna_hf.py
 	$(PYTHON) scripts/build_rsna_subset.py --seed 42

@@ -90,6 +90,17 @@ def main() -> int:
             ("primary specificity CI low", f"{cis['specificity']['low']:.4f}"),
         ]
 
+    # 5-fold cross-validation — only if that experiment has been run.
+    kfold_path = METRICS / "efficientnet_b0_kfold.json"
+    if kfold_path.exists():
+        k = json.loads(kfold_path.read_text(encoding="utf-8"))
+        for name in ("auc", "accuracy", "sensitivity", "specificity", "f1"):
+            agg = k["test_metric_summary"][name]
+            checks += [
+                (f"kfold {name} mean", f"{agg['mean']:.4f}"),
+                (f"kfold {name} std", f"{agg['std']:.4f}"),
+            ]
+
     failures = []
     for label, expected in checks:
         ok = expected in text

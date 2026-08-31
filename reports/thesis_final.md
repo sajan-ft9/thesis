@@ -499,6 +499,41 @@ the operating point to **sensitivity 0.9410 and specificity 0.9188**, which *mee
 0.90 specificity target at a modest sensitivity cost. The appropriate operating point
 is therefore a deployment choice; both are reported transparently.
 
+#### 4.1.2 Cross-Validation Robustness
+
+The result above comes from a single stratified 80/20 train/validation split (plus the
+fixed official test set). To check that it is not an artefact of that particular split,
+EfficientNet-B0 was retrained from scratch on **5 independent stratified folds** of the
+training pool (StratifiedKFold, shuffled, seed 42; same hyperparameters and early
+stopping as the primary run), with **every fold's checkpoint evaluated on the same
+untouched official test set** (n = 624 — never used for fold assignment, training, or
+early stopping in any fold):
+
+| Metric | Mean | Std | Range (5 folds) | Single-split result (§4.1) |
+|---|---|---|---|---|
+| ROC-AUC | **0.9707** | 0.0057 | [0.9623, 0.9796] | 0.9678 |
+| Accuracy | 0.9192 | 0.0185 | [0.8830, 0.9311] | 0.9183 |
+| Sensitivity | 0.9764 | 0.0086 | [0.9667, 0.9923] | 0.9667 |
+| Specificity | 0.8239 | 0.0623 | [0.7009, 0.8675] | 0.8376 |
+| F1 | 0.9382 | 0.0125 | [0.9138, 0.9466] | 0.9366 |
+
+*Table 4.1b: 5-fold cross-validation, EfficientNet-B0, tested on the fixed held-out set
+each time. Full per-fold results in `results/metrics/efficientnet_b0_kfold.json`.*
+
+The cross-validated mean AUC (0.9707) sits within 0.003 of the single-split result
+(0.9678) and well inside its bootstrap CI, confirming the headline number is not a
+lucky split. **Specificity is the metric that moves most across folds** (range 0.70–0.87,
+std 0.062) — fold 4 (specificity 0.701) stopped early (best epoch 5) and, like the
+static-INT8 model in §4.3, exhibits a calibration shift at the fixed 0.5 threshold rather
+than a loss of discrimination (its own test AUC, 0.9724, is still among the best of the
+five folds). This is consistent with the thesis's broader finding that specificity at a
+fixed threshold is more calibration-sensitive than AUC across training runs, model
+precisions, and now training splits — reinforcing that a fixed 0.5 threshold, not the
+model's discrimination ability, is the source of specificity variability. This addresses
+the "no k-fold cross-validation" item previously listed as a limitation (§6.2); a full
+multi-seed **and** multi-fold study, and repeating this for the two baseline
+architectures, remain future work.
+
 ### 4.2 Model Comparison (Baselines)
 
 | Model | Params (M) | ROC-AUC | Accuracy | Sensitivity | Specificity | F1 | FP / FN | CPU Latency (ms) | Size (MB) |

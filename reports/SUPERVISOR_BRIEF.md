@@ -25,6 +25,10 @@ Kermany pediatric CXR dataset.
 ## 3. Key results (held-out test, n=624; all reproducible)
 - **EfficientNet-B0:** AUC 0.968, sensitivity 0.967, specificity 0.838, F1 0.937;
   best precision/specificity balance of the three models (38 false positives vs 72/77).
+- **5-fold cross-validation** (retrained 5x, each evaluated on the same held-out test
+  set): mean AUC **0.9707** (std 0.0057, range [0.9623, 0.9796]) — confirms the
+  single-split result isn't a lucky split. Specificity is the most fold-sensitive
+  metric (range 0.70–0.87); a calibration, not discrimination, effect.
 - **Quantization:** static INT8 → **70.5% smaller, ~8× faster CPU, ~30× lower inference-time
   memory increase** (median of 5 isolated runs), for a 2.3-point AUC cost; dynamic INT8 keeps
   accuracy but barely compresses and gives no memory benefit.

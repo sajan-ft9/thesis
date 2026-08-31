@@ -3,7 +3,7 @@
 % Self-contained: compiles standalone (pdflatex supervisor_summary.tex), no
 % external figure/bib dependencies. Numbers are taken verbatim from
 % results/metrics/*.json and cross-checked by scripts/verify_thesis_numbers.py
-% (31/31 pass at time of writing). Full write-up: reports/thesis_final.md.
+% (41/41 pass at time of writing). Full write-up: reports/thesis_final.md.
 % =============================================================================
 \documentclass[11pt]{article}
 \usepackage[margin=2.5cm]{geometry}
@@ -69,7 +69,7 @@ the thesis.
   \item \textbf{Reproducibility.} \texttt{make reproduce} runs the full
         pipeline end-to-end; \texttt{scripts/verify\_thesis\_numbers.py}
         asserts every number in the final report matches
-        \texttt{results/metrics/*.json} verbatim (currently 31/31 pass).
+        \texttt{results/metrics/*.json} verbatim (currently 41/41 pass).
 \end{enumerate}
 
 \section*{Key Results}
@@ -118,7 +118,7 @@ shift (ECE 0.035 $\rightarrow$ 0.119).
 \section*{Independent Verification}
 Prior to this summary, all headline numbers were re-derived directly from
 the raw JSON result files (not just taken from the written report), and the
-project's own verification script was re-run and confirmed to pass 31/31.
+project's own verification script was re-run and confirmed to pass 41/41.
 The automated test suite (9 files, $\sim$40 tests) executes without
 failures. The git history additionally documents three self-corrections: an
 earlier, inflated 5-fold cross-validation figure; an earlier, incorrectly
@@ -146,13 +146,48 @@ $\sim6\times$ to $\sim30\times$ --- a genuine, more-reliable measurement of
 a narrower quantity (memory added by inference alone, excluding
 model-build/quantization overhead), not a discretionary re-framing.
 
+\section*{5-Fold Cross-Validation (new)}
+To address the single-split limitation, EfficientNet-B0 was retrained from
+scratch on 5 independent stratified folds of the training pool (same
+hyperparameters and early stopping as the primary run), with every fold's
+checkpoint evaluated on the same untouched official test set ($n=624$):
+
+\begin{table}[h]
+\centering
+\caption{5-fold cross-validation vs.\ the single-split result}
+\begin{tabular}{lrrr}
+\toprule
+Metric & Mean (5 folds) & Std & Single-split \\
+\midrule
+ROC-AUC & 0.9707 & 0.0057 & 0.9678 \\
+Accuracy & 0.9192 & 0.0185 & 0.9183 \\
+Sensitivity & 0.9764 & 0.0086 & 0.9667 \\
+Specificity & 0.8239 & 0.0623 & 0.8376 \\
+F1 & 0.9382 & 0.0125 & 0.9366 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent The cross-validated mean AUC (0.9707) sits within 0.003 of the
+single-split result and inside its bootstrap CI, confirming the headline
+number is not a lucky split. Specificity is the most fold-sensitive metric
+(range [0.70, 0.87]); the lowest-specificity fold's own AUC (0.9724) is
+still among the best of the five, indicating a threshold-calibration effect
+rather than a loss of discrimination -- consistent with the same pattern
+already observed for static-INT8 quantization. This was done only for the
+primary model (not the two baselines), and fold assignment was image-level,
+not patient-level (patient identifiers are not reliably recoverable from
+the dataset's filenames) -- both are stated as remaining limitations below,
+not silently resolved.
+
 \section*{Limitations (acknowledged in the thesis)}
 \begin{itemize}[leftmargin=1.4em]
   \item Single primary training dataset (pediatric); external validation is
         a single exploratory zero-shot probe, not a multi-site clinical
         validation.
-  \item No $k$-fold cross-validation --- single stratified split with
-        bootstrap confidence intervals.
+  \item 5-fold CV was run for the primary model only, not the two baseline
+        architectures; fold assignment is image-level, not verified
+        patient-level.
   \item Efficiency measured via CPU proxy metrics; no physical edge-device
         (e.g.\ Raspberry Pi) benchmark.
   \item Grad-CAM++ explanations are qualitative; no radiologist review of
@@ -163,10 +198,14 @@ model-build/quantization overhead), not a discretionary re-framing.
 \section*{Assessment}
 The work is internally consistent, its quantitative claims are independently
 traceable to reproducible artifacts, and its limitations are stated rather
-than obscured. The main open question for supervisory discussion is scope:
-whether the single-dataset/single-split design is sufficient for the final
-submission, or whether $k$-fold cross-validation and/or a second full
-external dataset should be added before defense.
+than obscured. The single-split-vs-lucky-split question raised in the
+previous version of this summary has been directly addressed by the 5-fold
+result above. The main open question for supervisory discussion is now
+narrower: whether extending cross-validation to the two baseline
+architectures and/or adding a second full external dataset is warranted
+before the final submission, or whether the current single-model CV result
+and single exploratory external probe are sufficient scope for a Master's
+thesis.
 
 \vspace{1em}
 \noindent\textit{Full write-up:} \texttt{reports/thesis\_final.md} \quad

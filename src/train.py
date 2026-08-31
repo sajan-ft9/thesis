@@ -26,7 +26,7 @@ import torch.optim as optim
 from torch.amp import GradScaler, autocast
 
 from .config import Config, add_config_cli_args, config_from_cli
-from .dataset import build_dataloaders, class_distribution
+from .dataset import DataBundle, build_dataloaders, class_distribution
 from .metrics import compute_metrics
 from .models import build_model
 from .utils import build_metadata, ensure_dir, get_device, get_logger, save_json, seed_everything
@@ -125,13 +125,18 @@ def _monitor_value(metrics: dict[str, float], loss: float, monitor: str) -> floa
     return -math.inf if (value is None or math.isnan(value)) else value
 
 
-def train(cfg: Config) -> dict[str, Any]:
-    """Full training run for a single model configuration. Returns a summary dict."""
+def train(cfg: Config, data: DataBundle | None = None) -> dict[str, Any]:
+    """Full training run for a single model configuration. Returns a summary dict.
+
+    ``data``, if given, is used as-is instead of deriving a fresh split from
+    ``cfg`` — used by :mod:`scripts.run_kfold_cv` to train on a cross-validation
+    fold's train/val partition while keeping the same held-out test set.
+    """
     seed = seed_everything(cfg.seed)
     device = get_device(cfg.device)
     logger.info("Experiment '%s' | device=%s | seed=%d", cfg.experiment_name, device, seed)
 
-    data = build_dataloaders(cfg, seed=seed)
+    data = data if data is not None else build_dataloaders(cfg, seed=seed)
     logger.info("Train class balance: %s", class_distribution(data.train_samples))
 
     model = build_model(

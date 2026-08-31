@@ -37,6 +37,8 @@ __all__ = [
     "verify_no_leakage",
     "compute_dataset_statistics",
     "build_dataloaders",
+    "build_dataloaders_from_samples",
+    "deduplicate_samples",
 ]
 
 logger = get_logger("dataset")
@@ -257,24 +259,22 @@ class DataBundle:
     test_samples: list[Sample]
 
 
-def build_dataloaders(cfg: Config, seed: int | None = None, drop_last: bool = True) -> DataBundle:
-    """Build train/val/test loaders with deterministic seeding and a stratified split."""
-    seed = cfg.seed if seed is None else seed
-    root = Path(cfg.data.root)
+def build_dataloaders_from_samples(
+    cfg: Config,
+    train_samples: list[Sample],
+    val_samples: list[Sample],
+    test_samples: list[Sample],
+    seed: int,
+    drop_last: bool = True,
+) -> DataBundle:
+    """Build a :class:`DataBundle` from explicit sample lists (no scanning/splitting).
+
+    Shared by :func:`build_dataloaders` (which derives the lists via one stratified
+    split) and :mod:`scripts.run_kfold_cv` (which derives them per cross-validation
+    fold) so the loader-construction logic — transforms, seeding, worker init — is
+    identical either way.
+    """
     train_transform, eval_transform = build_transforms(cfg)
-
-    all_train = scan_split(root / cfg.data.train_dirname)
-    test_samples = scan_split(root / cfg.data.test_dirname)
-    if cfg.data.deduplicate:
-        all_train, removed = deduplicate_samples(all_train)
-        if removed:
-            logger.info("Deduplicated train pool: removed %d byte-identical duplicate image(s)", len(removed))
-    train_samples, val_samples = stratified_split(all_train, cfg.data.val_split, seed)
-
-    logger.info(
-        "Split sizes -> train=%d val=%d test=%d", len(train_samples), len(val_samples), len(test_samples)
-    )
-
     train_ds = ChestXRayDataset(train_samples, train_transform, name="train")
     val_ds = ChestXRayDataset(val_samples, eval_transform, name="val")
     test_ds = ChestXRayDataset(test_samples, eval_transform, name="test")
@@ -303,6 +303,25 @@ def build_dataloaders(cfg: Config, seed: int | None = None, drop_last: bool = Tr
         val_samples=val_samples,
         test_samples=test_samples,
     )
+
+
+def build_dataloaders(cfg: Config, seed: int | None = None, drop_last: bool = True) -> DataBundle:
+    """Build train/val/test loaders with deterministic seeding and a stratified split."""
+    seed = cfg.seed if seed is None else seed
+    root = Path(cfg.data.root)
+
+    all_train = scan_split(root / cfg.data.train_dirname)
+    test_samples = scan_split(root / cfg.data.test_dirname)
+    if cfg.data.deduplicate:
+        all_train, removed = deduplicate_samples(all_train)
+        if removed:
+            logger.info("Deduplicated train pool: removed %d byte-identical duplicate image(s)", len(removed))
+    train_samples, val_samples = stratified_split(all_train, cfg.data.val_split, seed)
+
+    logger.info(
+        "Split sizes -> train=%d val=%d test=%d", len(train_samples), len(val_samples), len(test_samples)
+    )
+    return build_dataloaders_from_samples(cfg, train_samples, val_samples, test_samples, seed, drop_last)
 
 
 def validate_dataset(cfg: Config, check_duplicates: bool = True, check_leakage: bool = True) -> dict[str, object]:

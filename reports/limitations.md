@@ -27,5 +27,10 @@ Additional methodological notes:
 - The official Kermany validation split (16 images) is too small for model
   selection; a stratified split carved from the training set is used instead, with
   the official test set held out untouched.
+- The primary model's single-split result is corroborated by 5-fold cross-validation
+  (5 independent retrains, each evaluated on the same held-out test set): mean AUC
+  0.9707 (std 0.0057), within 0.003 of the single-split AUC (0.9678). This was not
+  done for the two baseline architectures, and patient-level grouping across folds
+  was not verified (see item 1).
 - Static INT8 quantization is backend-dependent; if unsupported on the host, the
   pipeline reports this rather than substituting estimated numbers.

@@ -153,8 +153,12 @@ EfficientNet-class models. The system is positioned as screening/decision suppor
 the operating point a deployment parameter.
 
 \section{Limitations and Future Work}
-Single (pediatric, single-institution) dataset; no external, clinical-reader, or
-on-device-hardware validation (none simulated); class imbalance. Future work: external
+Single (pediatric, single-institution) dataset; no clinical-reader or
+on-device-hardware validation (none simulated); class imbalance. The primary result is
+corroborated by 5-fold cross-validation (mean AUC 0.971, std 0.006, each fold evaluated
+on the same held-out test set), but this was not repeated for the baseline
+architectures, and fold assignment is image-level rather than confirmed patient-level.
+Future work: external
 validation (NIH ChestX-ray14, CheXpert), quantization-aware training to close the PTQ
 gap, on-device (Raspberry Pi / Jetson) benchmarking, and quantitative explanation
 evaluation against bounding boxes (e.g., RSNA).
